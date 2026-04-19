@@ -1,6 +1,6 @@
 [project]
 name = "evalit-4me"
-version = "0.0.1"
+version = "0.0.2"
 description = "Open-source reference implementation of the 5-layer AI evaluation framework for academic peer review."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -25,10 +25,12 @@ dependencies = [
 
 [project.optional-dependencies]
 # PDF ingest: marker-pdf provides the `marker_single` CLI that our
-# subprocess-based MarkerRunner shells out to. Optional because it's heavy
-# (~2 GB model weights on first run) and GPLv3 — users who only review
-# pre-extracted markdown don't need it.
-pdf = ["marker-pdf>=1.10.2"]
+# subprocess-based MarkerRunner shells out to for full-fidelity parsing.
+# pypdf is a lightweight text extractor used by `quick_parser` for
+# venue-config detection — it reads a handful of pages in <1s so users
+# don't wait minutes on marker just to sniff the venue. Optional because
+# marker is heavy (~2 GB model weights) and GPLv3.
+pdf = ["marker-pdf>=1.10.2", "pypdf>=5.0"]
 mcp = ["mcp>=1.0"]
 dashboard = ["streamlit>=1.38"]
 bench = []

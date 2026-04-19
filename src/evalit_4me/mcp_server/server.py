@@ -44,10 +44,14 @@ def build_server() -> FastMCP:
         venue config. Returns {recommended, confidence, rationale}.
 
         `recommended` is one of: neurips, arxiv, ieee.
+
+        Uses the fast `quick_parser` path on PDFs (reads the first few
+        pages via pypdf — subsecond) so config detection does not pay
+        for a full marker parse.
         """
         path = Path(paper_path).expanduser()
-        markdown = _load_markdown(path)
-        guess = detect_best_config(markdown)
+        markdown, full_doc = _quick_sample_markdown(path)
+        guess = detect_best_config(markdown, full_doc=full_doc)
         return {
             "recommended": guess.recommended,
             "confidence": round(guess.confidence, 3),
@@ -73,9 +77,11 @@ def build_server() -> FastMCP:
         """
         path = Path(paper_path).expanduser()
         if not configs:
-            # Auto-detect and use just the recommended config.
-            markdown = _load_markdown(path)
-            guess = detect_best_config(markdown)
+            # Auto-detect and use just the recommended config. The full
+            # marker parse still runs inside run_multi_config; here we
+            # only need a fast sniff for the venue heuristic.
+            markdown, full_doc = _quick_sample_markdown(path)
+            guess = detect_best_config(markdown, full_doc=full_doc)
             configs = [guess.recommended]
 
         # Validate early so we don't half-run.
@@ -130,15 +136,18 @@ def build_server() -> FastMCP:
     return server
 
 
-def _load_markdown(path: Path) -> str:
-    """Shared detection-time markdown loader."""
-    if path.suffix.lower() == ".pdf":
-        from evalit_4me.ingest.parser import parse_pdf
+def _quick_sample_markdown(path: Path) -> tuple[str, bool]:
+    """Return `(text, full_doc)` for venue-detection purposes.
 
-        paper = parse_pdf(path)
-        body = "\n\n".join(f"## {s.title}\n\n{s.text}" for s in paper.sections)
-        return f"# {paper.metadata.title}\n\n{body}"
-    return path.read_text(encoding="utf-8")
+    - `.pdf`: first few pages via pypdf (`full_doc=False` — `detect_best_config`
+      skips length heuristics on partial input).
+    - `.md` or anything else: the whole file (`full_doc=True`).
+    """
+    if path.suffix.lower() == ".pdf":
+        from evalit_4me.ingest.quick_parser import quick_extract_first_pages
+
+        return quick_extract_first_pages(path), False
+    return path.read_text(encoding="utf-8"), True
 
 
 def _build_runtime():

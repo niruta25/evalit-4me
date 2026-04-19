@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-04-19
+
+### Added
+- `src/evalit_4me/ingest/quick_parser.py`: pypdf-backed `quick_extract_first_pages(path, n=3)` — subsecond partial-PDF text extractor used exclusively for venue-config detection. No model weights, no subprocess.
+- `pypdf>=5.0` added to the `[pdf]` optional extra alongside `marker-pdf`.
+
+### Changed
+- `detect_config` MCP tool now uses the quick parser on PDFs. Previously it called the full `marker_single` pipeline just to sniff the venue, which could take 5–10 minutes and occasionally time out (observed: a complex PDF hitting the 600s `MarkerRunner` limit and stalling config detection entirely). Detection is now near-instant regardless of document size.
+- `review_paper` MCP tool: same change for the auto-detect code path (when the caller omits `configs`). The full marker parse still runs inside `run_multi_config`; only the venue sniff is now cheap.
+- `skill_helpers.detect_best_config(markdown, *, full_doc=True)` — new `full_doc` kwarg. When `False` (the quick-parser callers pass this), length-based heuristics (`<3k` / `>15k` word-count bins) are skipped because they are not meaningful on a sample. Strong signals (Roman-numeral headers, arXiv IDs, broader-impact language) still match. Backwards compatible.
+- Plugin SKILL.md rewrote the "First-run note" as "Timing notes" to reflect the new two-tier cost model (detect is free; full PDF parse still takes minutes). Also documents the `uvx` pre-convert escape hatch for users who plan to iterate.
+- `plugin/.mcp.json` pin bumped `@v0.0.1` → `@v0.0.2`; Claude Desktop snippet in the root README bumped to match.
+- `pyproject.toml` version 0.0.1 → 0.0.2; `http_client.py` default user-agent updated to match.
+
 ### Fixed
 - Marketplace manifest location: moved `marketplace.json` to `.claude-plugin/marketplace.json` at repo root. Claude Code's `/plugin marketplace add` looks for the manifest under `.claude-plugin/` — the bare-root location fails with "Marketplace file not found." README references updated.
 - Marketplace manifest `source` schema: changed from invalid `{"source": "git-subdir", "path": "plugin"}` (missing `url` for cross-repo subdir) to the simple relative-path string `"./plugin"` that same-repo subdir plugins use. Also added `$schema`, `description`, `category`, and per-plugin `homepage` fields to match the format used by the official claude-plugins marketplace.
@@ -48,5 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI via GitHub Actions (ruff, pyright, pytest on Python 3.11 & 3.12).
 - Pre-commit hooks (ruff, pyright, large-file guard).
 
-[Unreleased]: https://github.com/niruta25/evalit-4me/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/niruta25/evalit-4me/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/niruta25/evalit-4me/releases/tag/v0.0.2
 [0.0.1]: https://github.com/niruta25/evalit-4me/releases/tag/v0.0.1

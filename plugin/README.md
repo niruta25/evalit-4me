@@ -17,7 +17,7 @@ Reviewer-assist academic-paper review for Claude Code. Exposes the [evalit-4me](
 
 - [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf] @ git+...@v0.0.1"`, which fetches and caches the Python package automatically — no separate clone or `pip install` required.
 - *(Optional)* `ANTHROPIC_API_KEY` exported in the shell where Claude Code runs. The pipeline works without it (heuristic fallback), but rubric scoring is richer with an LLM.
-- *(First run)* Expect a one-time download of ~2 GB on first use — this is the `marker-pdf` model weights for PDF parsing. Cached across runs.
+- *(First PDF review)* Expect a one-time download of ~2 GB — `marker-pdf` model weights for full-fidelity PDF parsing. Cached across runs. `detect_config` does not pay this cost; it samples the first few pages via `pypdf` in under a second.
 
 ## Install
 

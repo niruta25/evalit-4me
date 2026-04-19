@@ -86,7 +86,7 @@ _NEURIPS_HINTS = re.compile(
 )
 
 
-def detect_best_config(markdown: str) -> ConfigGuess:
+def detect_best_config(markdown: str, *, full_doc: bool = True) -> ConfigGuess:
     """Decide which shipped config best fits a paper based on its markdown.
 
     Heuristics (first match wins within each category):
@@ -94,14 +94,19 @@ def detect_best_config(markdown: str) -> ConfigGuess:
     * Roman-numeral headers (≥3) → IEEE conference style
     * arXiv ID in body → arXiv preprint
     * Broader-impact / societal-impact language → NeurIPS
-    * Very short (<3k words) → IEEE (conference-format bias)
-    * Very long (>15k words) → arXiv (preprint bias)
+    * Very short (<3k words) → IEEE (conference-format bias)    [full_doc only]
+    * Very long (>15k words) → arXiv (preprint bias)            [full_doc only]
     * Fallback → NeurIPS (the default evalit config)
+
+    Pass `full_doc=False` when `markdown` is only a partial extract (e.g.
+    the first handful of pages from `quick_parser`). The length-based
+    heuristics are skipped in that mode because word count is not
+    meaningful on a sample — a long paper and a short paper look
+    identical if you only read three pages.
     """
     roman_hits = len(_IEEE_RE.findall(markdown))
     arxiv_hits = bool(_ARXIV_RE.search(markdown))
     neurips_hits = bool(_NEURIPS_HINTS.search(markdown))
-    word_count = len(markdown.split())
 
     if roman_hits >= 3:
         return ConfigGuess(
@@ -121,18 +126,20 @@ def detect_best_config(markdown: str) -> ConfigGuess:
             confidence=0.75,
             rationale="Broader-impact / checklist language detected (NeurIPS convention).",
         )
-    if word_count < 3000:
-        return ConfigGuess(
-            recommended="ieee",
-            confidence=0.55,
-            rationale=f"Short paper ({word_count} words) — matches IEEE conference format.",
-        )
-    if word_count > 15000:
-        return ConfigGuess(
-            recommended="arxiv",
-            confidence=0.55,
-            rationale=f"Long paper ({word_count} words) — matches arXiv preprint norms.",
-        )
+    if full_doc:
+        word_count = len(markdown.split())
+        if word_count < 3000:
+            return ConfigGuess(
+                recommended="ieee",
+                confidence=0.55,
+                rationale=f"Short paper ({word_count} words) — matches IEEE conference format.",
+            )
+        if word_count > 15000:
+            return ConfigGuess(
+                recommended="arxiv",
+                confidence=0.55,
+                rationale=f"Long paper ({word_count} words) — matches arXiv preprint norms.",
+            )
     return ConfigGuess(
         recommended="neurips",
         confidence=0.50,

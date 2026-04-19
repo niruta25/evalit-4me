@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Marketplace manifest location: moved `marketplace.json` to `.claude-plugin/marketplace.json` at repo root. Claude Code's `/plugin marketplace add` looks for the manifest under `.claude-plugin/` — the bare-root location fails with "Marketplace file not found." README references updated.
+
 ### Added
 - `marketplace.json` at repo root: declares the `evalit` plugin at `plugin/` as a `git-subdir` source, so `/plugin marketplace add niruta25/evalit-4me` + `/plugin install evalit@niruta25-plugins` resolves correctly.
 - New `[pdf]` optional extra in `pyproject.toml` for `marker-pdf`.

@@ -486,7 +486,7 @@ sequenceDiagram
 
 ### Install — Claude Code
 
-The plugin lives at [`plugin/`](./plugin/) in this repo — a proper Claude Code plugin with `plugin.json`, auto-registered `.mcp.json`, and a skill. The repo root ships a [`marketplace.json`](./marketplace.json) that declares the plugin at the `plugin/` subdirectory.
+The plugin lives at [`plugin/`](./plugin/) in this repo — a proper Claude Code plugin with `plugin.json`, auto-registered `.mcp.json`, and a skill. The repo root ships a [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) that declares the plugin at the `plugin/` subdirectory.
 
 ```
 /plugin marketplace add niruta25/evalit-4me

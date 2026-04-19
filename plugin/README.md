@@ -21,7 +21,7 @@ Reviewer-assist academic-paper review for Claude Code. Exposes the [evalit-4me](
 
 ## Install
 
-The repo root ships a `marketplace.json` that declares this plugin at `plugin/`. From Claude Code:
+The repo root ships a `.claude-plugin/marketplace.json` that declares this plugin at `plugin/`. From Claude Code:
 
 ```
 /plugin marketplace add niruta25/evalit-4me

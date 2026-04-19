@@ -1,5 +1,7 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "niruta25-plugins",
+  "description": "Niruta Talwekar's Claude Code plugins — currently hosts `evalit`, a reviewer-assist academic-paper review pipeline.",
   "owner": {
     "name": "Niruta Talwekar",
     "url": "https://github.com/niruta25"
@@ -8,10 +10,9 @@
     {
       "name": "evalit",
       "description": "Reviewer-assist academic-paper review — 5-stage pipeline (compliance, citation verification, depth, rubric, composite) with NeurIPS/IEEE/arXiv configs. Outputs structured signals for a human reviewer, never an accept/reject decision.",
-      "source": {
-        "source": "git-subdir",
-        "path": "plugin"
-      }
+      "category": "productivity",
+      "source": "./plugin",
+      "homepage": "https://github.com/niruta25/evalit-4me"
     }
   ]
 }

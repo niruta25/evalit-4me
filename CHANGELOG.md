@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Marketplace manifest location: moved `marketplace.json` to `.claude-plugin/marketplace.json` at repo root. Claude Code's `/plugin marketplace add` looks for the manifest under `.claude-plugin/` — the bare-root location fails with "Marketplace file not found." README references updated.
+- Marketplace manifest `source` schema: changed from invalid `{"source": "git-subdir", "path": "plugin"}` (missing `url` for cross-repo subdir) to the simple relative-path string `"./plugin"` that same-repo subdir plugins use. Also added `$schema`, `description`, `category`, and per-plugin `homepage` fields to match the format used by the official claude-plugins marketplace.
 
 ### Added
 - `marketplace.json` at repo root: declares the `evalit` plugin at `plugin/` as a `git-subdir` source, so `/plugin marketplace add niruta25/evalit-4me` + `/plugin install evalit@niruta25-plugins` resolves correctly.

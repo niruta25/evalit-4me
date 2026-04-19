@@ -21,13 +21,15 @@ dependencies = [
     "openai>=1.50",
     "pyyaml>=6.0",
     "typer>=0.24.1",
-    "marker-pdf>=1.10.2",
 ]
 
 [project.optional-dependencies]
-mcp = [
-    "mcp>=1.0",
-]
+# PDF ingest: marker-pdf provides the `marker_single` CLI that our
+# subprocess-based MarkerRunner shells out to. Optional because it's heavy
+# (~2 GB model weights on first run) and GPLv3 — users who only review
+# pre-extracted markdown don't need it.
+pdf = ["marker-pdf>=1.10.2"]
+mcp = ["mcp>=1.0"]
 dashboard = ["streamlit>=1.38"]
 bench = []
 

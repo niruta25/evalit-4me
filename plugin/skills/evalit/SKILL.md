@@ -1,7 +1,7 @@
 ---
 name: evalit
 description: Review an academic paper using the evalit 5-stage reviewer-assist pipeline. Triggers on PDF/markdown paths plus phrases like "review this paper", "evaluate this paper", "score this paper", "check this submission". Can compare multiple venue configs in parallel and tweak composite-score weights interactively.
-allowed-tools: [mcp__evalit__detect_config, mcp__evalit__review_paper, mcp__evalit__compare, mcp__evalit__reweight, Bash, Read, Glob, Write]
+allowed-tools: [mcp__evalit__detect_config, mcp__evalit__review_paper, mcp__evalit__compare, mcp__evalit__reweight, Read, Glob]
 ---
 
 # evalit — academic-paper review skill

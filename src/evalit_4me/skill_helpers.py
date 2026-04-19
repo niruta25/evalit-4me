@@ -1,12 +1,9 @@
-"""Shared helpers for the Claude skill + MCP server.
+"""Shared helpers for the Claude Code plugin + MCP server.
 
-All three "skill behaviors" are implemented here and exposed in two
-surfaces:
-
-    1. `integrations/claude-code-skill/helpers/*.py` — thin CLI wrappers
-       around these functions (Claude Code's SKILL.md shells out to them).
-    2. `src/evalit_4me/mcp_server/server.py` — MCP tools that call into
-       these same helpers (Claude Desktop runs this as a stdio server).
+All three "skill behaviors" are implemented here and exposed through
+the MCP server (`src/evalit_4me/mcp_server/server.py`), which is in
+turn auto-registered by the Claude Code plugin at `plugin/.mcp.json`
+and can be wired into Claude Desktop via `claude_desktop_config.json`.
 
 Functions:
 

@@ -1,15 +1,16 @@
-"""MCP server surface for Claude Desktop.
+"""MCP server surface for Claude Desktop and the Claude Code plugin.
 
-Exposes four tools that mirror the Claude Code skill's helpers:
+Exposes four reviewer-assist tools:
 
-    detect_best_config(paper_path)                -> JSON
-    run_multi_config(paper_path, configs)         -> JSON list
-    compare_records(record_paths)                 -> markdown
-    recompute_composite(record_path, weights)     -> JSON
+    detect_config(paper_path)                     -> JSON
+    review_paper(paper_path, configs=None)        -> JSON
+    compare(record_paths)                         -> markdown
+    reweight(record_path, weights)                -> JSON
 
-Install:  the `[mcp]` extra pulls the `mcp` Python SDK; the install.sh
-script in `integrations/claude-code-skill/` prints the exact JSON block
-to paste into Claude Desktop's config.
+Install:  the `[mcp]` extra pulls the `mcp` Python SDK. The Claude Code
+plugin at `plugin/` auto-registers this server via `.mcp.json`; for
+Claude Desktop, add the equivalent block to `claude_desktop_config.json`
+under `mcpServers`.
 """
 
 from evalit_4me.mcp_server.server import build_server

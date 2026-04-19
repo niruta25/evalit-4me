@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "evalit": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "evalit-4me[mcp] @ git+https://github.com/niruta25/evalit-4me",
+        "python",
+        "-m",
+        "evalit_4me.mcp_server.server"
+      ]
+    }
+  }
+}

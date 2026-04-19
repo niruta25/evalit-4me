@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- README "Scope & responsible use" section: explicit reviewer-assist framing, no AI-text detection, composite score is a sort aid not a threshold.
+- Docstring on `Triage` enum clarifying `FAIL` is a reviewer triage signal, never auto-reject.
+- Responsible-use notes in MCP server module docstring and `review_paper` tool description so Claude Desktop users see the framing.
+
 ## [0.0.1] - 2026-04-18
 
 ### Added

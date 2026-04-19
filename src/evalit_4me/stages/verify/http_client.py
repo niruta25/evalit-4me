@@ -77,7 +77,7 @@ class HTTPClient:
     """
 
     cache_dir: Path = field(default_factory=_default_cache_dir)
-    user_agent: str = "evalit-4me/0.0.1 (https://github.com/niruta25/evalit-4me)"
+    user_agent: str = "evalit-4me/0.0.2 (https://github.com/niruta25/evalit-4me)"
     max_retries: int = 3
     backoff_base: float = 0.5
     fetcher: Fetcher = field(default=_urllib_fetcher)

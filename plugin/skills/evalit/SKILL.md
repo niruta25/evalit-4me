@@ -104,6 +104,9 @@ Call the MCP tool `compare` with a list of record paths. It returns a markdown s
 
 The pipeline works without an API key (heuristic fallback path), but rubric scoring is less informative. If `ANTHROPIC_API_KEY` isn't set, mention this and let the user choose: proceed with heuristics, or export a key and retry.
 
-## First-run note
+## Timing notes
 
-The first time the MCP server starts after plugin install, `uv` will download and cache the `evalit-4me` Python package plus its dependencies (including `marker-pdf` for PDF parsing — around 2 GB on first pull). Subsequent runs are fast.
+- `detect_config` is near-instant on any paper (uses `pypdf` to sample the first three pages). Safe to call proactively in step 2 without warning the user.
+- `review_paper` is the slow step on PDFs — `marker_single` may take 1–10 minutes depending on length and whether model weights are cached. Before step 4, warn the user: *"Parsing this PDF can take several minutes — first time even longer because marker downloads ~2 GB of model weights."*
+- If the user plans to iterate (reweight, try different configs), suggest pre-converting the PDF once: `uvx --with marker-pdf marker_single paper.pdf ~/tmp/` and then giving you the resulting `.md` path. Review runs on markdown are seconds, not minutes.
+- The first MCP-server invocation after plugin install also spends ~30s for `uv run --with` to prepare the ephemeral env. One-time cost.

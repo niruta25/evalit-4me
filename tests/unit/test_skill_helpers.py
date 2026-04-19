@@ -90,6 +90,29 @@ def test_detect_returns_all_shipped_configs():
         assert detect_best_config(md).recommended in SHIPPED_CONFIGS
 
 
+def test_detect_skips_length_heuristic_when_partial():
+    """Partial extracts can't be used to bucket by word count.
+
+    A short partial text (which would normally trigger the IEEE
+    short-paper branch) must instead fall through to the generic
+    NeurIPS default when `full_doc=False`.
+    """
+    partial = "# Paper\n\nShort fragment from first page only.\n"
+    assert detect_best_config(partial).recommended == "ieee"  # full_doc=True default
+    assert detect_best_config(partial, full_doc=False).recommended == "neurips"
+
+
+def test_detect_still_matches_strong_signals_when_partial():
+    """Roman-numeral, arxiv, and neurips cues must still fire on partial input."""
+    ieee = "I. INTRODUCTION\n\nII. RELATED\n\nIII. METHOD\n"
+    arxiv = "refers to arXiv:2501.00001v1"
+    neurips = "## Broader Impact\n\n" * 5
+
+    assert detect_best_config(ieee, full_doc=False).recommended == "ieee"
+    assert detect_best_config(arxiv, full_doc=False).recommended == "arxiv"
+    assert detect_best_config(neurips, full_doc=False).recommended == "neurips"
+
+
 # ---------------------------------------------------------------------------
 # slugify + output dir
 # ---------------------------------------------------------------------------

@@ -1,0 +1,63 @@
+# arXiv preprint-leniency venue config.
+#
+# Intended for reviewers assessing an arXiv preprint without a formal
+# conference gate. Section aliases are broad (so unusually-named
+# evaluation sections like "Training from scratch with GMMs and VAEs"
+# still match), word-count bounds are wide, and ethics/anonymization
+# are not required — preprints are authored and many predate the
+# broader-impact mandate.
+#
+# Use:  evalit review paper.pdf --config configs/arxiv.yaml
+
+venue: arxiv
+
+compliance:
+  required_sections:
+    - [abstract]
+    - [introduction, background, overview]
+    - [method, methods, methodology, approach, technique, model, architecture, framework]
+    - [experiment, experiments, evaluation, results, analysis, training, empirical]
+    - [conclusion, conclusions, discussion, future work]
+
+  word_count_min: 1000
+  word_count_max: 40000
+
+  min_references: 5
+
+  require_ethics: false
+  ethics_aliases:
+    - ethics
+    - broader impact
+    - broader impacts
+    - societal impact
+    - limitations
+
+  require_anonymization: false
+
+rubric:
+  id: arxiv-generic-v1
+  dimensions:
+    - name: soundness
+      weight: 0.30
+      max_score: 4
+      description: >
+        Technical correctness, appropriate experimental design, and the
+        extent to which claims are supported by evidence.
+    - name: presentation
+      weight: 0.20
+      max_score: 4
+      description: Clarity of exposition, figures, tables, and writing.
+    - name: contribution
+      weight: 0.25
+      max_score: 4
+      description: Originality and the size of the step beyond prior work.
+    - name: significance
+      weight: 0.25
+      max_score: 4
+      description: Expected impact on the field.
+
+  bias_adjustment:
+    enable_length_adjustment: true
+    length_penalty_start: 15000
+    length_penalty_full: 30000
+    max_penalty: 0.2

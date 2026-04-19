@@ -1,0 +1,63 @@
+# evalit-4me — custom venue config template.
+#
+# Usage:
+#   evalit rubric init --out configs/myvenue.yaml
+#   evalit review paper.pdf --config configs/myvenue.yaml
+#
+# Replace the placeholder values and delete the comment blocks you don't need.
+# Validate with: `evalit rubric validate <path>`.
+
+venue: my-venue-id
+
+compliance:
+  # Each entry is a list of section-title aliases; any match satisfies.
+  required_sections:
+    - [abstract]
+    - [introduction]
+    - [method, methods, methodology]
+    - [experiment, experiments, results]
+    - [conclusion, conclusions, discussion]
+
+  # Word-count bounds. Null disables either side.
+  word_count_min: 3000
+  word_count_max: 15000
+
+  # Minimum number of references expected.
+  min_references: 10
+
+  # Ethics / broader-impact requirement.
+  require_ethics: false
+  ethics_aliases:
+    - ethics
+    - broader impact
+    - limitations
+
+  # Anonymization heuristic.
+  require_anonymization: false
+
+rubric:
+  id: my-venue-rubric-v1
+  dimensions:
+    - name: soundness
+      weight: 0.30
+      max_score: 4
+      description: >
+        Is the technical content correct? Are claims supported by evidence?
+    - name: presentation
+      weight: 0.20
+      max_score: 4
+      description: Clarity of writing, figures, and exposition.
+    - name: contribution
+      weight: 0.25
+      max_score: 4
+      description: Originality and significance of the contribution.
+    - name: significance
+      weight: 0.25
+      max_score: 4
+      description: Expected impact on the field.
+
+  bias_adjustment:
+    enable_length_adjustment: true
+    length_penalty_start: 10000
+    length_penalty_full: 20000
+    max_penalty: 0.3

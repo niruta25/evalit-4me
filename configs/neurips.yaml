@@ -1,0 +1,68 @@
+# NeurIPS-style reviewer-assist rubric (partial — compliance block only).
+# Chunk 1.9 extends this with the rubric scoring block.
+
+venue: neurips
+
+compliance:
+  # Each entry is a list of acceptable section-title aliases; any match is
+  # enough to satisfy the requirement. Matching is case-insensitive and
+  # substring-based against normalized (number-prefix stripped) titles.
+  required_sections:
+    - [abstract]
+    - [introduction, background]
+    - [method, methods, methodology, approach, model]
+    - [experiment, experiments, evaluation, results]
+    - [conclusion, conclusions, discussion]
+
+  # Hard word-count bounds. Null disables either side. NeurIPS main text is
+  # roughly 4k-12k words; we're lenient here to avoid spurious CONDITIONALs.
+  word_count_min: 3000
+  word_count_max: 15000
+
+  # Minimum number of references expected for a conference paper.
+  min_references: 10
+
+  # Ethics / broader-impact section. NeurIPS requires a broader impact
+  # statement or explicit justification of its absence.
+  require_ethics: true
+  ethics_aliases:
+    - ethics
+    - ethical considerations
+    - broader impact
+    - broader impacts
+    - societal impact
+    - limitations
+
+  # Reviewer-assist context: submissions are typically anonymized.
+  require_anonymization: true
+
+rubric:
+  id: neurips-reviewer-v1
+  dimensions:
+    - name: soundness
+      weight: 0.30
+      max_score: 4
+      description: >
+        Technical correctness, appropriate experimental design,
+        and the extent to which claims are supported by evidence.
+    - name: presentation
+      weight: 0.20
+      max_score: 4
+      description: >
+        Clarity of exposition, figures, tables, and writing.
+    - name: contribution
+      weight: 0.25
+      max_score: 4
+      description: >
+        Originality and the size of the step taken beyond prior work.
+    - name: significance
+      weight: 0.25
+      max_score: 4
+      description: >
+        Expected impact on the research community.
+
+  bias_adjustment:
+    enable_length_adjustment: true
+    length_penalty_start: 10000
+    length_penalty_full: 20000
+    max_penalty: 0.3

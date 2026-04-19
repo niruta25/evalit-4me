@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+uv.lock
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+
+# Type checkers
+.pyright/
+.mypy_cache/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Project caches / artifacts
+.cache/
+bench/results/raw/
+*.sqlite
+*.sqlite-journal
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local dev notes / chunk deliverable summaries (not tracked)
+.chunks/
+
+# Local evaluation reports + planning docs (not tracked)
+.reports/
+
+# Claude Code — user-specific permissions only
+.claude/settings.local.json

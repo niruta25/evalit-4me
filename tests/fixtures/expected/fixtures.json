@@ -1,0 +1,91 @@
+{
+  "paper_01_numbered_refs": {
+    "title": "Attention Is All You Need",
+    "section_titles": [
+      "Abstract",
+      "Introduction",
+      "Related Work",
+      "Model Architecture",
+      "Training",
+      "Results",
+      "Conclusion"
+    ],
+    "abstract_contains": "Transformer",
+    "figure_count": 2,
+    "table_count": 1,
+    "reference_count": 5,
+    "reference_keys": [
+      {"arxiv_id": "1409.0473", "year": 2014},
+      {"title_contains": "Attention is all you need", "year": 2017},
+      {"doi": "10.1038/nature14539", "year": 2015},
+      {"title_contains": "Deep residual learning", "year": 2016},
+      {"arxiv_id": "1412.6980", "year": 2015}
+    ]
+  },
+  "paper_02_doi_heavy": {
+    "title": "Graph Neural Networks for Molecular Property Prediction",
+    "section_titles": [
+      "Abstract",
+      "Introduction",
+      "Method",
+      "Experiments",
+      "Discussion",
+      "Conclusion"
+    ],
+    "abstract_contains": "Graph neural networks",
+    "figure_count": 1,
+    "table_count": 1,
+    "reference_count": 6,
+    "reference_keys": [
+      {"arxiv_id": "1704.01212", "year": 2017},
+      {"arxiv_id": "1609.02907", "year": 2017},
+      {"doi": "10.1039/c7sc02664a", "year": 2018},
+      {"doi": "10.1038/ncomms13890", "year": 2017},
+      {"arxiv_id": "1806.01261", "year": 2018},
+      {"arxiv_id": "1810.00826", "year": 2019}
+    ]
+  },
+  "paper_03_bulleted_refs": {
+    "title": "Scaling Laws for Language Models",
+    "section_titles": ["Abstract", "Introduction", "Methods", "Results"],
+    "abstract_contains": "scales",
+    "figure_count": 2,
+    "table_count": 0,
+    "reference_count": 4,
+    "reference_keys": [
+      {"arxiv_id": "2001.08361", "year": 2020},
+      {"arxiv_id": "2203.15556", "year": 2022},
+      {"title_contains": "Language models are few-shot", "year": 2020},
+      {"title_contains": "Language models are unsupervised", "year": 2019}
+    ]
+  },
+  "paper_04_no_refs_section": {
+    "title": "A Short Position Paper on Reproducibility",
+    "section_titles": ["Abstract", "Background", "Position", "Conclusion"],
+    "abstract_contains": "reproducibility",
+    "figure_count": 0,
+    "table_count": 0,
+    "reference_count": 0,
+    "reference_keys": []
+  },
+  "paper_05_mixed_refs": {
+    "title": "Variational Autoencoders: A Tutorial",
+    "section_titles": [
+      "Abstract",
+      "Introduction",
+      "The Evidence Lower Bound",
+      "Practical Training"
+    ],
+    "abstract_contains": "variational autoencoders",
+    "figure_count": 2,
+    "table_count": 1,
+    "reference_count": 5,
+    "reference_keys": [
+      {"arxiv_id": "1312.6114", "year": 2014},
+      {"title_contains": "Stochastic backpropagation", "year": 2014},
+      {"arxiv_id": "1606.05908", "year": 2016},
+      {"title_contains": "beta-VAE", "year": 2017},
+      {"arxiv_id": "1705.07120", "year": 2018}
+    ]
+  }
+}

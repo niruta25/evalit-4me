@@ -1,0 +1,74 @@
+# IEEE conference venue config.
+#
+# Tuned for IEEE-style conferences (SouthEastCon, ICC, VTC, etc.) where
+# section headers use Roman-numeral prefixes ("I. INTRODUCTION", "II.
+# RELATED WORK") that our parser normalizes to plain titles. Author
+# anonymization is NOT required (IEEE conferences are typically
+# single-blind). Ethics / broader-impact sections are optional.
+#
+# Rubric uses the IEEE TPC flavor: novelty, technical quality, clarity,
+# significance. Each dimension is scored 0-5 (half of the NeurIPS scale
+# is too coarse for 4-6 page papers).
+#
+# Use:  evalit review paper.pdf --config configs/ieee.yaml
+
+venue: ieee
+
+compliance:
+  required_sections:
+    - [abstract]
+    - [introduction, background]
+    - [method, methods, methodology, approach, proposed, system, architecture, design]
+    - [experiment, experiments, evaluation, results, analysis, implementation]
+    - [conclusion, conclusions, discussion]
+
+  # IEEE conference format is typically 4-6 pages (≈3k-6k words).
+  # Lenient bounds accommodate extended papers without spurious CONDITIONALs.
+  word_count_min: 2000
+  word_count_max: 10000
+
+  min_references: 10
+
+  require_ethics: false
+  ethics_aliases:
+    - ethics
+    - broader impact
+    - limitations
+
+  # IEEE is mostly single-blind (authors visible on submission).
+  require_anonymization: false
+
+rubric:
+  id: ieee-tpc-v1
+  dimensions:
+    - name: novelty
+      weight: 0.30
+      max_score: 5
+      description: >
+        Originality of the contribution relative to prior work. Does the
+        paper introduce a new technique, insight, or combination that
+        hasn't appeared before?
+    - name: technical_quality
+      weight: 0.30
+      max_score: 5
+      description: >
+        Rigor of the methodology, soundness of claims, completeness of
+        experiments, and correctness of analysis.
+    - name: clarity
+      weight: 0.20
+      max_score: 5
+      description: >
+        Quality of writing, organization, figures, and tables. Would a
+        practitioner be able to understand and reproduce the work?
+    - name: significance
+      weight: 0.20
+      max_score: 5
+      description: >
+        Likely impact on the community. Does this paper address an
+        important problem, and do the results materially advance the field?
+
+  bias_adjustment:
+    enable_length_adjustment: true
+    length_penalty_start: 7000
+    length_penalty_full: 12000
+    max_penalty: 0.2

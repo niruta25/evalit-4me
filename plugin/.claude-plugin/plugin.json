@@ -1,0 +1,22 @@
+{
+  "name": "evalit",
+  "version": "0.0.1",
+  "description": "Reviewer-assist academic-paper review. 5-stage pipeline (compliance, citation verification, depth, rubric, composite) with NeurIPS/IEEE/arXiv venue configs. Outputs a structured review draft for a human reviewer — never an accept/reject decision.",
+  "author": {
+    "name": "Niruta Talwekar",
+    "url": "https://github.com/niruta25"
+  },
+  "homepage": "https://github.com/niruta25/evalit-4me",
+  "repository": "https://github.com/niruta25/evalit-4me",
+  "license": "Apache-2.0",
+  "keywords": [
+    "peer-review",
+    "academic",
+    "evaluation",
+    "citation-verification",
+    "neurips",
+    "ieee",
+    "arxiv",
+    "reviewer-assist"
+  ]
+}

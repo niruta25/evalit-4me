@@ -487,30 +487,34 @@ sequenceDiagram
 2. **Auto config detection** — heuristic pick (IEEE / arXiv / NeurIPS) before asking the user to confirm.
 3. **Interactive reweighting** — change composite weights against a saved record, see the delta in recommendation. No LLM calls, no cost.
 
-### Install
+### Install — Claude Code
 
-```bash
-bash integrations/claude-code-skill/install.sh
+The plugin lives at [`plugin/`](./plugin/) in this repo — a proper Claude Code plugin with `plugin.json`, auto-registered `.mcp.json`, a skill, and a `/evalit:evalit` command.
+
+```
+/plugin install evalit@niruta25/evalit-4me
 ```
 
-Two things happen:
+Prereq: [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp] @ git+..."`, so there's no separate clone + `uv sync` step. First invocation downloads dependencies (~2 GB including marker-pdf); cached after.
 
-1. Skill installed to `~/.claude/skills/evalit/` (Claude Code picks it up automatically).
-2. The install script prints a JSON block — **paste it** into `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) under `mcpServers` for Claude Desktop. Example:
+Plugin-specific docs: [`plugin/README.md`](./plugin/README.md).
+
+### Install — Claude Desktop
+
+Add this block to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) under `mcpServers`, then restart Claude Desktop:
 
 ```json
 {
   "mcpServers": {
     "evalit": {
       "command": "uv",
-      "args": ["run", "--project", "/Users/you/evalit-4me",
+      "args": ["run", "--with",
+               "evalit-4me[mcp] @ git+https://github.com/niruta25/evalit-4me",
                "python", "-m", "evalit_4me.mcp_server.server"]
     }
   }
 }
 ```
-
-Then restart Claude Desktop.
 
 ### Usage — Claude Code
 
@@ -522,7 +526,7 @@ Claude triggers the `evalit` skill, detects the config, asks whether to run one 
 
 Or use the slash command shortcut:
 
-> `/evalit ~/Downloads/mypaper.pdf`
+> `/evalit:evalit ~/Downloads/mypaper.pdf`
 
 **Reweight conversation example:**
 

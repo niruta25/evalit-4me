@@ -8,18 +8,33 @@ Works as a CLI (`evalit review paper.pdf`), a Python library, a Streamlit dashbo
 
 ---
 
+## Scope & responsible use
+
+**evalit-4me is a reviewer-assist tool. It is not a reviewer replacement and it is not a gate.**
+
+- **Outputs are inputs for a human reviewer.** The pipeline produces structured signals — claim-level citation verification, depth heuristics, rubric breakdown, compliance triage — so a reviewer can spend their limited time where it matters. It does not make accept/reject decisions.
+- **Compliance triage (`PASS` / `CONDITIONAL` / `FAIL`) is a sort signal, not a gate.** `FAIL` means "a human should look at this first," never "auto-reject."
+- **The composite score is a reviewer aid, not a threshold.** It exists to rank items in a reviewer's queue and to make per-stage contributions legible. It is not calibrated for automated accept/reject decisions, and we recommend against wiring it to one.
+- **No AI-text detection.** This project does not score "% AI-written" and does not flag papers based on authorship style. It evaluates the substance of a submission — claims, citations, methodology, rigor.
+- **Every run is audited.** Records persist to a SQLite log with config hash, per-stage scores, and cost, so downstream human decisions remain traceable.
+
+If you're considering evalit-4me in a venue workflow, the expected integration is **reviewer desk + triage queue**, not automated rejection.
+
+---
+
 ## Table of contents
 
-1. [What it does](#what-it-does)
-2. [Install](#install)
-3. [Quick start](#quick-start)
-4. [Venue configs](#venue-configs)
-5. [Composite score](#composite-score)
-6. [Python API](#python-api)
-7. [Architecture](#architecture)
-8. [Claude skill + MCP server](#claude-skill--mcp-server)
-9. [Project status](#project-status)
-10. [License](#license)
+1. [Scope & responsible use](#scope--responsible-use)
+2. [What it does](#what-it-does)
+3. [Install](#install)
+4. [Quick start](#quick-start)
+5. [Venue configs](#venue-configs)
+6. [Composite score](#composite-score)
+7. [Python API](#python-api)
+8. [Architecture](#architecture)
+9. [Claude skill + MCP server](#claude-skill--mcp-server)
+10. [Project status](#project-status)
+11. [License](#license)
 
 ---
 

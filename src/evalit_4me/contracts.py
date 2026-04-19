@@ -49,6 +49,19 @@ class VerificationSource(StrEnum):
 
 
 class Triage(StrEnum):
+    """Compliance triage outcome — a sort signal for a human reviewer, not a gate.
+
+    - ``PASS``: no compliance red flags; reviewer can focus on substance.
+    - ``CONDITIONAL``: minor issues (formatting, word count, anonymization
+      uncertainty); a reviewer should confirm before making a decision.
+    - ``FAIL``: serious compliance concerns (missing sections, no ethics
+      statement, obvious anonymization breaks); a reviewer should examine
+      first. **Never auto-reject.**
+
+    The composite score owns the final recommendation; compliance only
+    surfaces an advisory banner above the summary.
+    """
+
     PASS = "PASS"
     CONDITIONAL = "CONDITIONAL"
     FAIL = "FAIL"

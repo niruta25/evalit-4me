@@ -1,5 +1,12 @@
 """MCP stdio server exposing the evalit skill behaviors to Claude Desktop.
 
+**Scope — reviewer assist, not reviewer replacement.** These tools produce
+structured artifacts (records, composite scores, verified citations) to
+help a human reviewer work faster. They do **not** make accept/reject
+decisions and are not calibrated for automated gating. The composite score
+is a sort signal; the compliance `FAIL` triage means "look at this first,"
+not "auto-reject."
+
 Four tools, all thin wrappers around `evalit_4me.skill_helpers`. Runs as
 a stdio process (no ports, no auth — Claude Desktop spawns it as a child
 process and talks to it via stdin/stdout).
@@ -55,6 +62,9 @@ def build_server() -> FastMCP:
         """Run the evalit 5-stage pipeline. If `configs` has multiple
         entries, runs are parallel. Writes artifacts to
         ~/evalit-reports/<date>-<slug>/ and returns paths + summary.
+
+        Output is a reviewer-assist draft — composite score and compliance
+        triage are sort/triage signals, not accept/reject decisions.
 
         Arguments:
             paper_path: local filesystem path to a PDF or markdown file.

@@ -589,7 +589,6 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
-    { name = "marker-pdf" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -602,6 +601,9 @@ dashboard = [
 ]
 mcp = [
     { name = "mcp" },
+]
+pdf = [
+    { name = "marker-pdf" },
 ]
 
 [package.dev-dependencies]
@@ -617,7 +619,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40" },
-    { name = "marker-pdf", specifier = ">=1.10.2" },
+    { name = "marker-pdf", marker = "extra == 'pdf'", specifier = ">=1.10.2" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0" },
     { name = "openai", specifier = ">=1.50" },
     { name = "pydantic", specifier = ">=2.7" },
@@ -625,7 +627,7 @@ requires-dist = [
     { name = "streamlit", marker = "extra == 'dashboard'", specifier = ">=1.38" },
     { name = "typer", specifier = ">=0.24.1" },
 ]
-provides-extras = ["mcp", "dashboard", "bench"]
+provides-extras = ["pdf", "mcp", "dashboard", "bench"]
 
 [package.metadata.requires-dev]
 dev = [

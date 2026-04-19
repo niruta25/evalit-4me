@@ -1,0 +1,17 @@
+{
+  "name": "niruta25-plugins",
+  "owner": {
+    "name": "Niruta Talwekar",
+    "url": "https://github.com/niruta25"
+  },
+  "plugins": [
+    {
+      "name": "evalit",
+      "description": "Reviewer-assist academic-paper review — 5-stage pipeline (compliance, citation verification, depth, rubric, composite) with NeurIPS/IEEE/arXiv configs. Outputs structured signals for a human reviewer, never an accept/reject decision.",
+      "source": {
+        "source": "git-subdir",
+        "path": "plugin"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # evalit — Claude Code plugin
 
-Reviewer-assist academic-paper review for Claude Code. Exposes the [evalit-4me](https://github.com/niruta25/evalit-4me) 5-stage pipeline as an MCP server plus a skill and a `/evalit:evalit` slash command.
+Reviewer-assist academic-paper review for Claude Code. Exposes the [evalit-4me](https://github.com/niruta25/evalit-4me) 5-stage pipeline as an MCP server plus a skill that auto-triggers on paper paths and phrases like *"review this paper"*.
 
 **Scope: reviewer-assist, not a reviewer.** Outputs are structured signals for a human reviewer — never an accept/reject decision. Compliance `FAIL` means "a human should look at this first." The composite score is a sort aid, not a threshold. No AI-text detection.
 
@@ -12,29 +12,23 @@ Reviewer-assist academic-paper review for Claude Code. Exposes the [evalit-4me](
   - `reweight(record_path, weights)` — recompute composite with custom weights (no LLM, no network).
   - `compare(record_paths)` — side-by-side markdown comparison of saved records.
 - **Skill** (`skills/evalit/SKILL.md`) with playbooks for new-paper, reweight, and compare flows. Triggers on phrases like *"review this paper"*, *"score this submission"*, *"compare under different configs"*.
-- **Command** `/evalit:evalit [paper-path]` for explicit invocation.
 
 ## Prerequisites
 
-- [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp] @ git+..."`, which fetches and caches the Python package automatically.
+- [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf] @ git+...@v0.0.1"`, which fetches and caches the Python package automatically — no separate clone or `pip install` required.
 - *(Optional)* `ANTHROPIC_API_KEY` exported in the shell where Claude Code runs. The pipeline works without it (heuristic fallback), but rubric scoring is richer with an LLM.
 - *(First run)* Expect a one-time download of ~2 GB on first use — this is the `marker-pdf` model weights for PDF parsing. Cached across runs.
 
 ## Install
 
-From Claude Code:
+The repo root ships a `marketplace.json` that declares this plugin at `plugin/`. From Claude Code:
 
 ```
-/plugin install evalit
+/plugin marketplace add niruta25/evalit-4me
+/plugin install evalit@niruta25-plugins
 ```
 
-Once the marketplace listing is live. Until then, install directly from this repo:
-
-```
-/plugin install evalit@niruta25/evalit-4me
-```
-
-(Adjust the source specifier to whatever syntax your Claude Code build expects for a subdir plugin.)
+The install pins to release tag `v0.0.1`; upgrades happen when you re-run `/plugin install` after a new tag is cut.
 
 ## Example
 

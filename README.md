@@ -96,11 +96,9 @@ cd evalit-4me
 uv sync
 
 # Add optional extras as needed:
+uv sync --extra pdf           # PDF parsing (marker-pdf; ~2 GB on first run)
 uv sync --extra dashboard     # Streamlit UI
 uv sync --extra mcp           # Claude Desktop MCP server
-
-# Marker (PDF parser) isn't bundled — install separately if you want PDF support:
-uv add marker-pdf             # downloads ~2 GB of ML model weights on first run
 ```
 
 **If you prefer pip:**
@@ -108,8 +106,7 @@ uv add marker-pdf             # downloads ~2 GB of ML model weights on first run
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dashboard,mcp]"
-pip install marker-pdf        # optional — for PDF parsing
+pip install -e ".[pdf,dashboard,mcp]"
 ```
 
 **Set your API key** (optional — pipeline works without it, just heuristic-only):
@@ -489,13 +486,14 @@ sequenceDiagram
 
 ### Install — Claude Code
 
-The plugin lives at [`plugin/`](./plugin/) in this repo — a proper Claude Code plugin with `plugin.json`, auto-registered `.mcp.json`, a skill, and a `/evalit:evalit` command.
+The plugin lives at [`plugin/`](./plugin/) in this repo — a proper Claude Code plugin with `plugin.json`, auto-registered `.mcp.json`, and a skill. The repo root ships a [`marketplace.json`](./marketplace.json) that declares the plugin at the `plugin/` subdirectory.
 
 ```
-/plugin install evalit@niruta25/evalit-4me
+/plugin marketplace add niruta25/evalit-4me
+/plugin install evalit@niruta25-plugins
 ```
 
-Prereq: [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp] @ git+..."`, so there's no separate clone + `uv sync` step. First invocation downloads dependencies (~2 GB including marker-pdf); cached after.
+Prereq: [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf] @ git+...@v0.0.1"`, pinned to a release tag — so there's no separate clone + `uv sync` step. First invocation downloads dependencies (~2 GB including marker-pdf model weights); cached after.
 
 Plugin-specific docs: [`plugin/README.md`](./plugin/README.md).
 
@@ -509,7 +507,7 @@ Add this block to `~/Library/Application Support/Claude/claude_desktop_config.js
     "evalit": {
       "command": "uv",
       "args": ["run", "--with",
-               "evalit-4me[mcp] @ git+https://github.com/niruta25/evalit-4me",
+               "evalit-4me[mcp,pdf] @ git+https://github.com/niruta25/evalit-4me@v0.0.1",
                "python", "-m", "evalit_4me.mcp_server.server"]
     }
   }
@@ -524,9 +522,9 @@ Just say what you want:
 
 Claude triggers the `evalit` skill, detects the config, asks whether to run one or all, runs them in parallel, shows results, offers follow-ups.
 
-Or use the slash command shortcut:
+Or invoke the skill explicitly (once the plugin is installed, its name appears in the `/` menu):
 
-> `/evalit:evalit ~/Downloads/mypaper.pdf`
+> *"/evalit review ~/Downloads/mypaper.pdf"*
 
 **Reweight conversation example:**
 

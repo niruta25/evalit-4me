@@ -1,28 +1,39 @@
-"""MCP stdio server exposing the evalit skill behaviors to Claude Desktop.
+"""MCP stdio server exposing evalit's reviewer-assist pipeline.
 
 **Scope — reviewer assist, not reviewer replacement.** These tools produce
 structured artifacts (records, composite scores, verified citations) to
 help a human reviewer work faster. They do **not** make accept/reject
-decisions and are not calibrated for automated gating. The composite score
-is a sort signal; the compliance `FAIL` triage means "look at this first,"
-not "auto-reject."
+decisions and are not calibrated for automated gating.
 
 Four tools, all thin wrappers around `evalit_4me.skill_helpers`. Runs as
-a stdio process (no ports, no auth — Claude Desktop spawns it as a child
-process and talks to it via stdin/stdout).
+a stdio process — Claude Code spawns it as a child process and talks to
+it via stdin/stdout.
 
-Run standalone:  `uv run python -m evalit_4me.mcp_server.server`
+**LLM auth:** the server never reads `ANTHROPIC_API_KEY`. When rubric
+scoring or claim entailment needs an LLM call, the server asks the MCP
+client (Claude Code) to run the completion via `sampling/createMessage`.
+Clients that don't support sampling still get a useful result: the
+pipeline falls back to its deterministic heuristic mode.
+
+Run standalone: `uv run python -m evalit_4me.mcp_server.server`
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
-import os
+import logging
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
+from evalit_4me.llm.cache import CachingProvider, DiskCache
+from evalit_4me.llm.cost import CostTracker
+from evalit_4me.llm.mcp_sampling_adapter import (
+    McpSamplingProvider,
+    SamplingUnsupportedError,
+)
 from evalit_4me.skill_helpers import (
     SHIPPED_CONFIGS,
     compare_records,
@@ -32,6 +43,9 @@ from evalit_4me.skill_helpers import (
     run_multi_config,
     write_comparison,
 )
+from evalit_4me.stages.verify import HTTPClient
+
+log = logging.getLogger("evalit.mcp")
 
 
 def build_server() -> FastMCP:
@@ -40,17 +54,16 @@ def build_server() -> FastMCP:
 
     @server.tool()
     def detect_config(paper_path: str) -> dict[str, Any]:
-        """Inspect a paper (PDF or markdown) and recommend the best shipped
-        venue config. Returns {recommended, confidence, rationale}.
+        """Inspect a paper (PDF, markdown, or .docx) and recommend the best
+        shipped venue config. Returns {recommended, confidence, rationale}.
 
         `recommended` is one of: neurips, arxiv, ieee.
 
-        Uses the fast `quick_parser` path on PDFs (reads the first few
-        pages via pypdf — subsecond) so config detection does not pay
-        for a full marker parse.
+        For PDFs this uses `quick_parser` (pypdf, first few pages, subsecond).
+        `.md` and `.docx` inputs are read in full.
         """
         path = Path(paper_path).expanduser()
-        markdown, full_doc = _quick_sample_markdown(path)
+        markdown, full_doc = _quick_sample_text(path)
         guess = detect_best_config(markdown, full_doc=full_doc)
         return {
             "recommended": guess.recommended,
@@ -59,9 +72,10 @@ def build_server() -> FastMCP:
         }
 
     @server.tool()
-    def review_paper(
+    async def review_paper(
         paper_path: str,
         configs: list[str] | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Run the evalit 5-stage pipeline. If `configs` has multiple
         entries, runs are parallel. Writes artifacts to
@@ -71,32 +85,51 @@ def build_server() -> FastMCP:
         triage are sort/triage signals, not accept/reject decisions.
 
         Arguments:
-            paper_path: local filesystem path to a PDF or markdown file.
+            paper_path: local filesystem path to a `.pdf`, `.md`, or `.docx`.
             configs: list from {"neurips", "arxiv", "ieee"}. Defaults to
                 the auto-detected config when omitted.
         """
         path = Path(paper_path).expanduser()
         if not configs:
-            # Auto-detect and use just the recommended config. The full
-            # marker parse still runs inside run_multi_config; here we
-            # only need a fast sniff for the venue heuristic.
-            markdown, full_doc = _quick_sample_markdown(path)
+            markdown, full_doc = _quick_sample_text(path)
             guess = detect_best_config(markdown, full_doc=full_doc)
             configs = [guess.recommended]
 
-        # Validate early so we don't half-run.
         bad = [c for c in configs if c not in SHIPPED_CONFIGS]
         if bad:
             raise ValueError(f"unknown config(s): {bad}; must be one of {SHIPPED_CONFIGS}")
 
-        provider, http_client = _build_runtime()
-        out_dir, results = run_multi_config(
-            path,
-            configs,
-            provider=provider,
-            http_client=http_client,
-            parallel=True,
-        )
+        loop = asyncio.get_running_loop()
+        provider = _build_sampling_provider(ctx, loop=loop)
+        http_client = HTTPClient()
+
+        # Pipeline is sync — we run it in a worker thread below so the MCP
+        # event loop stays free for sampling round-trips.
+
+        def _run() -> tuple[Path, list[Any]]:
+            try:
+                return run_multi_config(
+                    path,
+                    configs,
+                    provider=provider,
+                    http_client=http_client,
+                    parallel=True,
+                )
+            except SamplingUnsupportedError:
+                log.info(
+                    "MCP client does not support sampling; re-running pipeline "
+                    "in heuristic mode (no LLM)."
+                )
+                return run_multi_config(
+                    path,
+                    configs,
+                    provider=None,
+                    http_client=http_client,
+                    parallel=True,
+                )
+
+        out_dir, results = await asyncio.to_thread(_run)
+
         payload: dict[str, Any] = {
             "out_dir": str(out_dir),
             "runs": [
@@ -136,38 +169,58 @@ def build_server() -> FastMCP:
     return server
 
 
-def _quick_sample_markdown(path: Path) -> tuple[str, bool]:
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _quick_sample_text(path: Path) -> tuple[str, bool]:
     """Return `(text, full_doc)` for venue-detection purposes.
 
-    - `.pdf`: first few pages via pypdf (`full_doc=False` — `detect_best_config`
-      skips length heuristics on partial input).
-    - `.md` or anything else: the whole file (`full_doc=True`).
+    - `.pdf`: first few pages via pypdf (`full_doc=False`).
+    - `.docx`: full mammoth markdown (`full_doc=True`).
+    - `.md`/`.txt`/anything else: read as text (`full_doc=True`).
     """
-    if path.suffix.lower() == ".pdf":
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
         from evalit_4me.ingest.quick_parser import quick_extract_first_pages
 
         return quick_extract_first_pages(path), False
+    if suffix == ".docx":
+        try:
+            import mammoth
+        except ImportError:
+            # Docx extra not installed — detection still works from the
+            # filename + a soft fallback to "no hints".
+            return "", True
+        with path.open("rb") as fh:
+            result = mammoth.convert_to_markdown(fh)
+        return result.value or "", True
     return path.read_text(encoding="utf-8"), True
 
 
-def _build_runtime():
-    """Return `(provider, http_client)` using env vars when present."""
-    provider = None
-    http_client = None
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        from evalit_4me.llm.anthropic_adapter import AnthropicProvider
-        from evalit_4me.llm.cache import CachingProvider, DiskCache
-        from evalit_4me.llm.cost import CostTracker
+def _build_sampling_provider(
+    ctx: Context | None,
+    *,
+    loop: asyncio.AbstractEventLoop | None = None,
+) -> CachingProvider | None:
+    """Wrap MCP sampling in the caching + cost-tracking provider layers.
 
-        provider = CachingProvider(
-            inner=AnthropicProvider(),
-            cache=DiskCache(),
-            tracker=CostTracker(),
-        )
-    from evalit_4me.stages.verify import HTTPClient
-
-    http_client = HTTPClient()
-    return provider, http_client
+    Returns None when no `Context` is available (e.g. a unit test invoking
+    the tool directly). The pipeline then runs in heuristic mode.
+    """
+    if ctx is None:
+        return None
+    try:
+        inner = McpSamplingProvider(ctx=ctx, loop=loop)
+    except Exception:
+        log.exception("Failed to construct McpSamplingProvider; falling back to heuristic mode.")
+        return None
+    return CachingProvider(
+        inner=inner,
+        cache=DiskCache(),
+        tracker=CostTracker(),
+    )
 
 
 def main() -> None:  # pragma: no cover — stdio entrypoint

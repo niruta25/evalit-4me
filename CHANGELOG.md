@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-04-19
+
+### Changed
+- **Plugin MCP server no longer requires `ANTHROPIC_API_KEY`.** LLM calls now route through the host client via MCP `sampling/createMessage`. When the client doesn't support sampling, the pipeline falls back to deterministic heuristic mode — users still get a full result with no setup. The direct-API path (`AnthropicProvider`) remains available for CLI users running outside Claude Code.
+- **PDF parsing default is now `pdfplumber`**, not `marker-pdf`. Install size on the plugin path drops from ~2 GB to ~10 MB. Two escape hatches for higher-fidelity parsing on figure- or math-heavy PDFs: set `EVALIT_USE_MARKER=1` in the environment, or pass `--full-fidelity` to `evalit review`. Marker is installed via the existing `[pdf]` extra; the plugin default now pulls `[pdf-lite]` instead.
+- `plugin/.mcp.json` spawn line: `evalit-4me[mcp,pdf]` → `evalit-4me[mcp,pdf-lite,docx]`.
+- `plugin/skills/evalit/SKILL.md` reweight playbook expanded with six conversational patterns: named presets, one-dim sweeps, tipping-point search, composite explanation, side-by-side comparison, and open-HTML / copy-markdown.
+
+### Added
+- `.docx` input support via `mammoth` (new `[docx]` optional extra, ~2 MB).
+- `src/evalit_4me/ingest/plumber_parser.py` — pdfplumber-backed PDF parser.
+- `src/evalit_4me/ingest/docx_parser.py` — mammoth-backed `.docx` parser.
+- `src/evalit_4me/ingest/dispatch.py` — unified `load_paper(path, use_marker=...)` dispatcher honoring the `EVALIT_USE_MARKER` env var.
+- `src/evalit_4me/llm/mcp_sampling_adapter.py` — `McpSamplingProvider` wrapping `ctx.session.create_message` with a sync-over-async bridge for the existing synchronous pipeline. Detects and raises `SamplingUnsupportedError` when the client cannot sample.
+- **Interactive HTML report**: `formatters/html.py` now embeds the record JSON and four range sliders (`compliance`, `verification`, `depth`, `rubric`). JS recomputes the composite in-browser using the same formula as `recompute_composite`. Includes reset-to-defaults and copy-review-markdown buttons.
+- `plugin/examples/` — 8 sample papers (5 `.md`, 2 `.pdf`, 1 `.docx`) covering NeurIPS / IEEE / arXiv happy paths, a compliance-FAIL case, a fabricated-citation case, single- and two-column PDFs, and the `.docx` dispatcher. Plus a short `plugin/examples/README.md` mapping each sample to the signal it exercises.
+- `scripts/regenerate_samples.sh` + `scripts/regenerate_samples.py` for rebuilding the PDF/DOCX samples from the markdown sources.
+- `--full-fidelity` flag on `evalit review` to opt into marker-pdf parsing.
+- `tests/unit/test_mcp_sampling_adapter.py` — unit tests for the sampling adapter, including the sync-over-async thread bridge.
+- `src/evalit_4me/formatters/sections.py` — pure section-builder (`ViewSection`, `build_view_sections`) moved out of the old dashboard module so HTML can consume it without a Streamlit import.
+
+### Removed
+- **Streamlit dashboard** deleted: `src/evalit_4me/dashboard/`, `[dashboard]` optional extra, `evalit dashboard` CLI command, `tests/unit/test_dashboard.py`. The interactive HTML report with in-browser sliders replaces every use case the dashboard served.
+- `ANTHROPIC_API_KEY` usage from the MCP server (`_build_runtime` deleted).
+
 ## [0.0.2] - 2026-04-19
 
 ### Added
@@ -62,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI via GitHub Actions (ruff, pyright, pytest on Python 3.11 & 3.12).
 - Pre-commit hooks (ruff, pyright, large-file guard).
 
-[Unreleased]: https://github.com/niruta25/evalit-4me/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/niruta25/evalit-4me/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/niruta25/evalit-4me/releases/tag/v0.0.3
 [0.0.2]: https://github.com/niruta25/evalit-4me/releases/tag/v0.0.2
 [0.0.1]: https://github.com/niruta25/evalit-4me/releases/tag/v0.0.1

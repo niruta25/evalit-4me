@@ -21,10 +21,18 @@ IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 TABLE_ROW_RE = re.compile(r"^\s*\|.+\|\s*$")
 TABLE_SEPARATOR_RE = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$")
 
-# Section numbering prefix, e.g. "1. ", "2.1 ", "3 ", "A.1 ".
+# Section numbering prefix, e.g. "1. ", "2.1 ", "3 ", "A.1 ", "I. ", "VII. ".
 # Applied to section titles so downstream compliance / rubric stages can
-# match on clean canonical names like "Introduction" instead of "1. Introduction".
-SECTION_NUMBER_PREFIX_RE = re.compile(r"^(?:[A-Z]\.?\s*)?\d+(?:\.\d+)*\.?\s+", re.IGNORECASE)
+# match on clean canonical names like "Introduction" instead of
+# "1. Introduction" or "VII. REFERENCES" (IEEE style).
+SECTION_NUMBER_PREFIX_RE = re.compile(
+    r"^(?:"
+    r"[A-Z]\.?\s*\d+(?:\.\d+)*\.?\s+"  # "A.1 " / "B.2.1 "
+    r"|\d+(?:\.\d+)*\.?\s+"  # "1. " / "2.1 "
+    r"|[IVXLCDM]{1,5}\.?\s+"  # Roman numerals "I. " / "VII. "
+    r")",
+    re.IGNORECASE,
+)
 
 REFERENCE_HEADERS = {
     "references",
@@ -166,12 +174,15 @@ def _build_sections(
         if not title and not body:
             continue
 
-        lowered = title.strip().lower()
-        if lowered in REFERENCE_HEADERS:
+        section_title = _normalize_title(title) or "Introduction"
+        # Check references header on *both* raw and normalized forms so
+        # IEEE-style "VII. REFERENCES" and plain "References" both match.
+        if (
+            title.strip().lower() in REFERENCE_HEADERS
+            or section_title.strip().lower() in REFERENCE_HEADERS
+        ):
             references_body = body
             continue
-
-        section_title = _normalize_title(title) or "Introduction"
         sections.append(
             Section(
                 id=_slugify(section_title) or f"section-{order}",

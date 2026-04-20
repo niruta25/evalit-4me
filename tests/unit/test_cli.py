@@ -30,7 +30,7 @@ def test_version_prints_installed_version():
 def test_help_lists_all_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for cmd in ("review", "rubric", "audit", "dashboard", "version"):
+    for cmd in ("review", "rubric", "audit", "version"):
         assert cmd in result.stdout
 
 

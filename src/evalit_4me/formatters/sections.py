@@ -1,21 +1,13 @@
-"""Streamlit reviewer view — single-page app.
+"""Structured content sections for the HTML report.
 
-Layout (top to bottom):
-    1. Score card (recommendation + overall score + reviewer confidence)
-    2. Compliance summary
-    3. Flagged citations with evidence
-    4. Depth scores (4 bars + rationales)
-    5. Rubric scores (per-dimension score + rationale)
-    6. Copy-paste review draft block (markdown)
-
-Each section is returned as a `ViewSection(title, body_markdown)` so the
-content is test-accessible without requiring Streamlit in CI.
+A `ViewSection(title, body_markdown)` is the atomic unit the HTML renderer
+consumes. Keeping section construction as a pure function (no HTML, no JS,
+no rendering library) makes it straightforward to unit-test.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
 from evalit_4me.contracts import EvaluationRecord
 from evalit_4me.formatters.reviewer import format_review_draft, render_review_markdown
@@ -28,73 +20,20 @@ class ViewSection:
 
 
 def build_view_sections(record: EvaluationRecord) -> list[ViewSection]:
-    """Pure function: produces the structured content the Streamlit UI renders.
-
-    Exercised directly by the smoke test — Streamlit is not required.
-    """
+    """Produce the ordered content sections for the HTML report."""
     draft = format_review_draft(record)
-    sections: list[ViewSection] = [
-        ViewSection(
-            title="Score card",
-            body_markdown=_score_card(record, draft),
-        ),
-        ViewSection(
-            title="Composite breakdown",
-            body_markdown=_composite_section(draft),
-        ),
-        ViewSection(
-            title="Compliance",
-            body_markdown=_compliance_section(record),
-        ),
-        ViewSection(
-            title="Flagged citations",
-            body_markdown=_flagged_citations_section(record),
-        ),
-        ViewSection(
-            title="Depth scores",
-            body_markdown=_depth_section(record),
-        ),
-        ViewSection(
-            title="Rubric scores",
-            body_markdown=_rubric_section(record),
-        ),
+    return [
+        ViewSection(title="Score card", body_markdown=_score_card(record, draft)),
+        ViewSection(title="Composite breakdown", body_markdown=_composite_section(draft)),
+        ViewSection(title="Compliance", body_markdown=_compliance_section(record)),
+        ViewSection(title="Flagged citations", body_markdown=_flagged_citations_section(record)),
+        ViewSection(title="Depth scores", body_markdown=_depth_section(record)),
+        ViewSection(title="Rubric scores", body_markdown=_rubric_section(record)),
         ViewSection(
             title="Review draft (copy-paste)",
             body_markdown="```markdown\n" + render_review_markdown(draft) + "```\n",
         ),
     ]
-    return sections
-
-
-def run_app(record_path: Path | str | None = None) -> None:  # pragma: no cover — UI driver
-    """Streamlit entrypoint. Loads a record from JSON, renders sections."""
-    import json
-
-    import streamlit as st  # type: ignore[import-not-found]
-
-    st.set_page_config(page_title="evalit-4me", layout="wide")
-    st.title("evalit-4me — reviewer view")
-
-    path = Path(record_path) if record_path else None
-    if path is None:
-        uploaded = st.file_uploader("Upload an EvaluationRecord JSON", type=["json"])
-        if uploaded is None:
-            st.info("Run `evalit review <paper.pdf> --output record.json` and upload the file.")
-            return
-        data = json.loads(uploaded.read())
-    else:
-        data = json.loads(path.read_text(encoding="utf-8"))
-
-    record = EvaluationRecord.model_validate(data)
-    for section in build_view_sections(record):
-        st.header(section.title)
-        st.markdown(section.body_markdown, unsafe_allow_html=False)
-        st.divider()
-
-
-# ---------------------------------------------------------------------------
-# Section builders
-# ---------------------------------------------------------------------------
 
 
 def _score_card(record: EvaluationRecord, draft) -> str:

@@ -39,7 +39,7 @@ from evalit_4me.formatters import (
     render_report_html,
     render_review_markdown,
 )
-from evalit_4me.ingest.parser import parse_markdown, parse_pdf
+from evalit_4me.ingest import load_paper as _load_paper_dispatched
 from evalit_4me.stages.orchestrate import PipelineOptions, run_pipeline
 from evalit_4me.stages.scoring import composite_score
 from evalit_4me.stages.verify import HTTPClient
@@ -186,11 +186,25 @@ def prepare_output_dir(
 
 
 def load_paper(path: Path):
-    """Load a paper from either a PDF or a pre-extracted markdown file."""
-    if path.suffix.lower() == ".pdf":
-        return parse_pdf(path), path.read_text(encoding="utf-8", errors="replace")
-    md = path.read_text(encoding="utf-8")
-    return parse_markdown(md, source_name=path.stem), md
+    """Load a paper from a `.pdf`, `.md`, or `.docx` file.
+
+    Returns `(Paper, raw_markdown_sample)` — the sample is used by the
+    venue-detection heuristics. For PDFs we return the file bytes coerced
+    to text (best-effort); docx inputs return the mammoth-produced
+    markdown; .md inputs return their own contents.
+    """
+    paper = _load_paper_dispatched(path)
+    suffix = path.suffix.lower()
+    if suffix in {".md", ".markdown", ".txt"}:
+        sample = path.read_text(encoding="utf-8")
+    elif suffix == ".docx":
+        # The Paper contract already holds the joined section text; that's
+        # a good sample for detect_best_config.
+        sample = "\n\n".join(s.text for s in paper.sections)
+    else:
+        # PDF — avoid re-parsing; use concatenated section text.
+        sample = "\n\n".join(s.text for s in paper.sections)
+    return paper, sample
 
 
 def run_multi_config(

@@ -1,6 +1,6 @@
 [project]
 name = "evalit-4me"
-version = "0.0.2"
+version = "0.0.3"
 description = "Open-source reference implementation of the 5-layer AI evaluation framework for academic peer review."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -31,8 +31,9 @@ dependencies = [
 # don't wait minutes on marker just to sniff the venue. Optional because
 # marker is heavy (~2 GB model weights) and GPLv3.
 pdf = ["marker-pdf>=1.10.2", "pypdf>=5.0"]
+pdf-lite = ["pdfplumber>=0.11", "pypdf>=5.0"]
+docx = ["mammoth>=1.8"]
 mcp = ["mcp>=1.0"]
-dashboard = ["streamlit>=1.38"]
 bench = []
 
 [project.scripts]

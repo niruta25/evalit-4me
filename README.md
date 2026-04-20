@@ -4,7 +4,7 @@
 
 Give `evalit-4me` a PDF of an academic paper. It returns a structured review draft — compliance triage, citation verification, depth scores, rubric assessment, and a composite recommendation — suitable for a reviewer-assist workflow.
 
-Works as a CLI (`evalit review paper.pdf`), a Python library, a Streamlit dashboard, a Claude Code skill, or a Claude Desktop MCP server.
+Works as a CLI (`evalit review paper.pdf`), a Python library, a Claude Code skill, or a Claude Desktop MCP server. Every run writes a self-contained, interactive HTML report with in-browser reweight sliders.
 
 ---
 
@@ -96,8 +96,9 @@ cd evalit-4me
 uv sync
 
 # Add optional extras as needed:
-uv sync --extra pdf           # PDF parsing (marker-pdf; ~2 GB on first run)
-uv sync --extra dashboard     # Streamlit UI
+uv sync --extra pdf-lite      # Lightweight PDF parsing (pdfplumber; ~10 MB)
+uv sync --extra pdf           # Full-fidelity PDF parsing (marker-pdf; ~2 GB on first run)
+uv sync --extra docx          # .docx input (mammoth; ~2 MB)
 uv sync --extra mcp           # Claude Desktop MCP server
 ```
 
@@ -106,7 +107,7 @@ uv sync --extra mcp           # Claude Desktop MCP server
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[pdf,dashboard,mcp]"
+pip install -e ".[pdf-lite,docx,mcp]"
 ```
 
 **Set your API key** (optional — pipeline works without it, just heuristic-only):
@@ -120,7 +121,7 @@ Verify:
 
 ```bash
 uv run evalit version
-# 0.0.1
+# 0.0.3
 ```
 
 ---
@@ -174,12 +175,12 @@ convolutions entirely...
 uv run evalit audit --input ~/evalit.sqlite --output fairness.json
 ```
 
-### Launch the Streamlit dashboard
+### Open the interactive HTML report
 
-```bash
-uv sync --extra dashboard
-uv run evalit dashboard record.json
-```
+Every run writes `<config>.html` alongside `record.json`. Open it in a browser
+to see the score card, compliance triage, flagged citations, depth + rubric
+tables, and **interactive reweight sliders** that recompute the composite in
+real time. Shareable, archivable, works offline.
 
 ### Scaffold a custom venue config
 
@@ -193,10 +194,10 @@ uv run evalit rubric validate configs/myvenue.yaml
 ```
 evalit version
 evalit review <paper>         [--config <path>] [--output <path>] [--log-db <path>] [--dry-run]
+                              [--full-fidelity]
 evalit rubric init <path>     [--overwrite]
 evalit rubric validate <path>
 evalit audit --input <db>     [--output <path>] [--threshold 0.55]
-evalit dashboard [record]
 ```
 
 ---
@@ -407,8 +408,8 @@ flowchart TD
 
     subgraph Output [Output surfaces]
         Reviewer[formatters/reviewer.py]
-        HTML[formatters/html.py]
-        Dashboard[dashboard/app.py<br/>Streamlit]
+        HTML[formatters/html.py<br/>interactive sliders]
+        Sections[formatters/sections.py]
         Sqlite[(storage/sqlite_log.py)]
         Fairness[audit/fairness.py]
     end
@@ -493,7 +494,7 @@ The plugin lives at [`plugin/`](./plugin/) in this repo — a proper Claude Code
 /plugin install evalit@niruta25-plugins
 ```
 
-Prereq: [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf] @ git+...@v0.0.2"`, pinned to a release tag — so there's no separate clone + `uv sync` step. First invocation downloads dependencies (~2 GB including marker-pdf model weights) the first time you actually run `review_paper` on a PDF; `detect_config` is near-instant even on a cold install.
+Prereq: [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf-lite,docx] @ git+...@v0.0.3"`, pinned to a release tag — no separate clone or `uv sync` required. Cold-start is ~5–10 s; subsequent invocations are instant. `detect_config` is subsecond even on a cold install. LLM work routes through Claude Code via MCP sampling — no `ANTHROPIC_API_KEY` required on the plugin path.
 
 Plugin-specific docs: [`plugin/README.md`](./plugin/README.md).
 
@@ -507,7 +508,7 @@ Add this block to `~/Library/Application Support/Claude/claude_desktop_config.js
     "evalit": {
       "command": "uv",
       "args": ["run", "--with",
-               "evalit-4me[mcp,pdf] @ git+https://github.com/niruta25/evalit-4me@v0.0.2",
+               "evalit-4me[mcp,pdf-lite,docx] @ git+https://github.com/niruta25/evalit-4me@v0.0.3",
                "python", "-m", "evalit_4me.mcp_server.server"]
     }
   }
@@ -570,9 +571,10 @@ Every skill invocation that runs the pipeline writes to:
 - 5-stage pipeline, 375 tests, lint + pyright clean.
 - 3 shipped venue configs (NeurIPS / IEEE / arXiv).
 - Composite score with redistributable weights, user-tweakable.
-- Streamlit dashboard.
+- Interactive static HTML report with in-browser reweight sliders.
+- PDF (pdfplumber default, marker opt-in), markdown, and `.docx` inputs.
 - SQLite audit log + fairness audit module.
-- Typer CLI with `review`, `rubric init/validate`, `audit`, `dashboard`, `version`.
+- Typer CLI with `review`, `rubric init/validate`, `audit`, `version`.
 - Claude skill (Claude Code + Claude Desktop MCP).
 
 **v0.1.1 / Phase 2 backlog:**

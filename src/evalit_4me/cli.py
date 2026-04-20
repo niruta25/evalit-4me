@@ -5,7 +5,6 @@ Subcommands:
     evalit rubric init <path>     — scaffold a custom venue config
     evalit rubric validate <path> — validate a config against the schema
     evalit audit <db>             — produce a fairness audit JSON over a log DB
-    evalit dashboard [record]     — launch Streamlit UI (requires [dashboard] extra)
     evalit version                — print version
 
 All subcommands use `--config` to point at a venue YAML. Defaults to the
@@ -15,7 +14,6 @@ shipped NeurIPS config.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import typer
@@ -25,7 +23,7 @@ from evalit_4me.audit.fairness import build_fairness_report_from_db, report_to_d
 from evalit_4me.config import load_venue_config
 from evalit_4me.formatters.json_out import dump_record_json
 from evalit_4me.formatters.reviewer import format_review_draft, render_review_markdown
-from evalit_4me.ingest.parser import parse_markdown, parse_pdf
+from evalit_4me.ingest import load_paper
 from evalit_4me.stages.orchestrate import PipelineOptions, run_pipeline
 from evalit_4me.stages.rubric import init_template, validate_config_file
 from evalit_4me.storage.sqlite_log import SqliteLog
@@ -56,7 +54,7 @@ def version() -> None:
 @app.command()
 def review(
     paper: Path = typer.Argument(
-        ..., exists=True, readable=True, help="Path to a PDF or markdown file."
+        ..., exists=True, readable=True, help="Path to a PDF, markdown, or .docx file."
     ),
     config: Path = typer.Option(_DEFAULT_CONFIG, "--config", "-c", help="Venue config YAML."),
     output: Path | None = typer.Option(
@@ -66,10 +64,16 @@ def review(
         None, "--log-db", help="Append the record to a SQLite audit log."
     ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Skip LLM and network calls."),
+    full_fidelity: bool = typer.Option(
+        False,
+        "--full-fidelity",
+        help="Use marker-pdf for PDF parsing (requires [pdf] extra). "
+        "Slower, higher quality. Default is pdfplumber.",
+    ),
 ) -> None:
     """Run the evaluation pipeline and print the reviewer markdown."""
     cfg = load_venue_config(config)
-    paper_obj = _load_paper(paper)
+    paper_obj = load_paper(paper, use_marker=full_fidelity or None)
     # v0.1: `--dry-run` and "no flag" currently behave the same — real LLM +
     # HTTP wiring lands in v0.1.1 once cost-gating is finalized. The flag
     # is already exposed so the semantics don't move later.
@@ -94,12 +98,6 @@ def review(
         log = SqliteLog(log_db)
         new_id = log.save(record)
         typer.echo(f"Logged evaluation id={new_id} to {log_db}", err=True)
-
-
-def _load_paper(path: Path):
-    if path.suffix.lower() == ".pdf":
-        return parse_pdf(path)
-    return parse_markdown(path.read_text(encoding="utf-8"), source_name=path.stem)
 
 
 # ---------------------------------------------------------------------------
@@ -162,35 +160,6 @@ def audit(
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(payload + "\n", encoding="utf-8")
         typer.echo(f"Wrote fairness report to {output}", err=True)
-
-
-# ---------------------------------------------------------------------------
-# dashboard
-# ---------------------------------------------------------------------------
-
-
-@app.command()
-def dashboard(
-    record: Path | None = typer.Argument(
-        None, exists=True, readable=True, help="Optional pre-loaded record JSON."
-    ),
-) -> None:
-    """Launch the Streamlit reviewer view. Requires the `[dashboard]` extra."""
-    try:
-        from streamlit.web import cli as stcli  # type: ignore[import-not-found]
-    except ImportError as exc:
-        typer.echo(
-            "Streamlit is not installed. Install with: pip install 'evalit-4me[dashboard]'",
-            err=True,
-        )
-        raise typer.Exit(code=1) from exc
-
-    app_path = str(Path(__file__).resolve().parent / "dashboard" / "app.py")
-    args = ["streamlit", "run", app_path]
-    if record is not None:
-        args.extend(["--", "--record", str(record)])
-    sys.argv = args
-    sys.exit(stcli.main())  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------

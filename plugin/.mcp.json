@@ -5,7 +5,7 @@
       "args": [
         "run",
         "--with",
-        "evalit-4me[mcp,pdf] @ git+https://github.com/niruta25/evalit-4me@v0.0.2",
+        "evalit-4me[mcp,pdf-lite,docx] @ git+https://github.com/niruta25/evalit-4me@v0.0.3",
         "python",
         "-m",
         "evalit_4me.mcp_server.server"

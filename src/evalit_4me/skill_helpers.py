@@ -52,7 +52,16 @@ SHIPPED_CONFIGS = ("neurips", "arxiv", "ieee")
 
 
 def configs_dir() -> Path:
-    """Directory containing shipped YAML configs. Works in dev install."""
+    """Directory containing shipped YAML configs.
+
+    Wheel installs ship `configs/*.yaml` inside the package at
+    `evalit_4me/_configs/` (see `[tool.hatch.build.targets.wheel.force-include]`
+    in pyproject.toml). An editable/source checkout has no `_configs/`
+    sibling, so we fall back to the repo-root `configs/` directory.
+    """
+    pkg_local = Path(__file__).parent / "_configs"
+    if pkg_local.exists():
+        return pkg_local
     return Path(__file__).resolve().parents[2] / "configs"
 
 

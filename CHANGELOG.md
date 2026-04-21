@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-04-20
+
+### Fixed
+- **Plugin install from wheel now finds the shipped venue configs.** The MCP server in `plugin/.mcp.json` launches via `uv run --with "evalit-4me @ git+…"`, which builds a wheel — but the venue YAMLs (`neurips.yaml`, `ieee.yaml`, `arxiv.yaml`, `template.yaml`) lived only in the repo-root `configs/` directory, which is not part of the wheel. As a result, `detect_config`, `review_paper`, and `evalit rubric init` failed with `FileNotFoundError` for every end-user install.
+- Resolvers in `src/evalit_4me/skill_helpers.py`, `src/evalit_4me/cli.py`, and `src/evalit_4me/stages/rubric.py` now try the package-local `_configs/` first and fall back to the repo-root `configs/` for editable installs. Tests, the `--config configs/neurips.yaml` CLI idiom, and docs all keep working unchanged.
+
+### Changed
+- `pyproject.toml` now ships `configs/*.yaml` inside the wheel at `evalit_4me/_configs/` via `[tool.hatch.build.targets.wheel.force-include]`.
+- `plugin/.mcp.json` git pin: `@v0.0.3` → `@v0.0.4`.
+- `plugin/.claude-plugin/plugin.json`: removed `version` field. Per the Claude Code plugin marketplace docs, for relative-path plugin sources the authoritative version lives in `marketplace.json`; `plugin.json` having it too causes the marketplace version to be ignored silently.
+- `.claude-plugin/marketplace.json`: top-level `description` moved under `metadata.description` (per schema), undocumented `owner.url` dropped, explicit `version: 0.0.4` added to the `evalit` plugin entry.
+
 ## [0.0.3] - 2026-04-19
 
 ### Changed

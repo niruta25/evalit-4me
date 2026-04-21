@@ -32,7 +32,17 @@ app = typer.Typer(help="evalit-4me: 5-layer AI evaluation framework for academic
 rubric_app = typer.Typer(help="Rubric config helpers.")
 app.add_typer(rubric_app, name="rubric")
 
-_DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "neurips.yaml"
+def _default_config_path() -> Path:
+    # Mirrors skill_helpers.configs_dir(): package-local first (wheel
+    # install ships configs at evalit_4me/_configs/), repo-root fallback
+    # for editable installs.
+    pkg_local = Path(__file__).parent / "_configs" / "neurips.yaml"
+    if pkg_local.exists():
+        return pkg_local
+    return Path(__file__).resolve().parents[2] / "configs" / "neurips.yaml"
+
+
+_DEFAULT_CONFIG = _default_config_path()
 
 
 # ---------------------------------------------------------------------------

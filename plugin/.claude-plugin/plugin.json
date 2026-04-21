@@ -1,6 +1,5 @@
 {
   "name": "evalit",
-  "version": "0.0.3",
   "description": "Reviewer-assist academic-paper review. 5-stage pipeline (compliance, citation verification, depth, rubric, composite) with NeurIPS/IEEE/arXiv venue configs. Outputs a structured review draft for a human reviewer — never an accept/reject decision.",
   "author": {
     "name": "Niruta Talwekar",

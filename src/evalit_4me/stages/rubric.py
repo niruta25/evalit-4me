@@ -7,13 +7,20 @@ adjusted total.
 
 Scoring paths:
 
-* **LLM path** — one call per dimension. Prompt includes the paper abstract,
-  short excerpts per key section, and the dimension description. LLM returns
-  JSON `{"score": float, "rationale": str}`.
-* **Heuristic fallback** — triggered when `provider is None` or the LLM
-  returns unparseable JSON. Scores are derived from the already-computed
-  verification ledger + depth report + a dimension-specific baseline, so
-  the pipeline always produces a usable `RubricScores` even in `--dry-run`.
+* **LLM path** — one single call scores *all* rubric dimensions in one
+  request. The prompt includes the paper abstract, short excerpts per
+  key section, and the list of dimensions with their max scores and
+  descriptions. The model returns one JSON object mapping each dimension
+  name to `{"score": float, "rationale": str}`. Batching the call cuts
+  the per-paper LLM budget from N calls to 1 — on a typical 4-dimension
+  venue config that's a 4× reduction with no measurable quality loss
+  (all dimensions share the same paper context anyway).
+* **Heuristic fallback** — triggered when `provider is None`, when the
+  LLM returns unparseable JSON, or on a per-dimension basis when the
+  batched response is missing or malformed for that specific dimension.
+  Scores are derived from the already-computed verification ledger +
+  depth report + a dimension-specific baseline, so the pipeline always
+  produces a usable `RubricScores` even in `--dry-run`.
 
 Bias adjustment reduces the total by a fraction proportional to how far
 `word_count` exceeds `length_penalty_start`, capped at `max_penalty`.
@@ -39,11 +46,13 @@ from evalit_4me.llm.protocol import LLMProvider, LLMRequest
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
 SCORE_SYSTEM = """You are an expert reviewer for a top-tier ML conference.
-Score the paper on the specified rubric dimension. Follow these rules:
-- Read the dimension description carefully.
-- Return ONLY JSON with two keys: "score" (float, 0..max_score) and
-  "rationale" (<= 3 sentences).
-- Do NOT include any other text.
+Score the paper on EACH of the rubric dimensions listed below. Follow these rules:
+- Read every dimension description carefully.
+- Return ONLY one JSON object. Each top-level key is a dimension name, and
+  each value is an object with two keys: "score" (float in [0, max_score]
+  for that dimension) and "rationale" (<= 2 sentences).
+- Include every dimension from the list. Do NOT invent dimensions.
+- Do NOT include any text outside the JSON.
 """
 
 SCORE_USER = """Paper title: {title}
@@ -60,14 +69,13 @@ Key signals (from earlier pipeline stages):
 - Limitations score: {limitations:.2f}
 - Reproducibility score: {reproducibility:.2f}
 
-Dimension: {dimension_name}
-Max score: {max_score}
-Description: {description}
-
 Section excerpts (each truncated to 500 chars):
 {excerpts}
 
-Return JSON now."""
+Dimensions to score:
+{dim_block}
+
+Return the JSON now."""
 
 
 # ---------------------------------------------------------------------------
@@ -86,17 +94,28 @@ def score_rubric(
 ) -> RubricScores:
     rubric = config.rubric if isinstance(config, VenueConfig) else config
     adjustment = rubric.bias_adjustment
+    signals = _collect_signals(ledger, depth)
 
-    dim_scores: list[DimensionScore] = []
-    for dim in rubric.dimensions:
-        score, rationale = _score_dimension(
+    parsed: dict[str, tuple[float, str]] = {}
+    if provider is not None:
+        parsed = _llm_score_batch(
             paper=paper,
-            ledger=ledger,
-            depth=depth,
-            dim=dim,
+            signals=signals,
+            dims=rubric.dimensions,
             provider=provider,
             model=model,
         )
+
+    dim_scores: list[DimensionScore] = []
+    for dim in rubric.dimensions:
+        if dim.name in parsed:
+            raw_score, rationale = parsed[dim.name]
+            score = max(0.0, min(dim.max_score, raw_score))
+        elif provider is None:
+            score, rationale = _heuristic_score(dim, signals)
+        else:
+            score, rationale = _heuristic_score(dim, signals)
+            rationale = f"{rationale} (LLM output unparseable; fell back to heuristics.)"
         dim_scores.append(
             DimensionScore(
                 name=dim.name,
@@ -178,31 +197,6 @@ def _collect_signals(ledger: ClaimLedger, depth: DepthReport) -> _Signals:
     )
 
 
-def _score_dimension(
-    *,
-    paper: Paper,
-    ledger: ClaimLedger,
-    depth: DepthReport,
-    dim: RubricDimension,
-    provider: LLMProvider | None,
-    model: str,
-) -> tuple[float, str]:
-    signals = _collect_signals(ledger, depth)
-    if provider is None:
-        return _heuristic_score(dim, signals)
-
-    llm_result = _llm_score(
-        paper=paper, ledger=ledger, depth=depth, dim=dim, provider=provider, model=model
-    )
-    if llm_result is not None:
-        score, rationale = llm_result
-        clamped = max(0.0, min(dim.max_score, score))
-        return clamped, rationale
-    # Graceful fallback.
-    score, rationale = _heuristic_score(dim, signals)
-    return score, rationale + " (LLM output unparseable; fell back to heuristics.)"
-
-
 def _heuristic_score(dim: RubricDimension, signals: _Signals) -> tuple[float, str]:
     """Produce a dimension score from already-computed pipeline signals.
 
@@ -264,17 +258,25 @@ _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE | re.MULTILINE
 _JSON_OBJ_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
-def _llm_score(
+def _llm_score_batch(
     *,
     paper: Paper,
-    ledger: ClaimLedger,
-    depth: DepthReport,
-    dim: RubricDimension,
+    signals: _Signals,
+    dims: list[RubricDimension],
     provider: LLMProvider,
     model: str,
-) -> tuple[float, str] | None:
-    signals = _collect_signals(ledger, depth)
+) -> dict[str, tuple[float, str]]:
+    """Score every dimension in one LLM call.
+
+    Returns a dict keyed by dimension name. Dimensions whose score couldn't
+    be parsed are simply absent from the dict, letting the caller fall back
+    to heuristics on a per-dimension basis.
+    """
     excerpts = _build_excerpts(paper)
+    dim_block = "\n".join(
+        f'- "{dim.name}" (max {dim.max_score}): {dim.description or "(no description)"}'
+        for dim in dims
+    )
     request = LLMRequest(
         prompt=SCORE_USER.format(
             title=paper.metadata.title or "(untitled)",
@@ -286,19 +288,19 @@ def _llm_score(
             methodology=signals.methodology,
             limitations=signals.limitations,
             reproducibility=signals.reproducibility,
-            dimension_name=dim.name,
-            max_score=dim.max_score,
-            description=dim.description,
             excerpts=excerpts,
+            dim_block=dim_block,
         ),
         system=SCORE_SYSTEM,
         model=model,
         temperature=0.0,
-        max_tokens=256,
+        # ~160 tokens per dimension is comfortable for a score + 2-sentence
+        # rationale; scale with the number of dimensions plus headroom.
+        max_tokens=max(512, 200 * len(dims)),
         seed=0,
     )
     response = provider.complete(request)
-    return _parse_score_json(response.text)
+    return _parse_batched_json(response.text, dims)
 
 
 def _build_excerpts(paper: Paper) -> str:
@@ -312,10 +314,18 @@ def _build_excerpts(paper: Paper) -> str:
     return "\n\n".join(parts) if parts else "(no key sections found)"
 
 
-def _parse_score_json(raw: str) -> tuple[float, str] | None:
+def _parse_batched_json(
+    raw: str, dims: list[RubricDimension]
+) -> dict[str, tuple[float, str]]:
+    """Parse the batched rubric response.
+
+    Shape expected: `{dim_name: {"score": float, "rationale": str}, ...}`.
+    Any dimension whose entry is missing or malformed is simply omitted —
+    the caller applies a heuristic fallback for those.
+    """
     candidate = _FENCE_RE.sub("", raw).strip()
     if not candidate:
-        return None
+        return {}
     obj: dict | None = None
     try:
         loaded = json.loads(candidate)
@@ -329,15 +339,21 @@ def _parse_score_json(raw: str) -> tuple[float, str] | None:
                 if isinstance(loaded, dict):
                     obj = loaded
             except json.JSONDecodeError:
-                return None
-    if obj is None or "score" not in obj:
-        return None
-    try:
-        score = float(obj["score"])
-    except (TypeError, ValueError):
-        return None
-    rationale = str(obj.get("rationale", ""))[:1000]
-    return score, rationale
+                return {}
+    if obj is None:
+        return {}
+    parsed: dict[str, tuple[float, str]] = {}
+    for dim in dims:
+        entry = obj.get(dim.name)
+        if not isinstance(entry, dict) or "score" not in entry:
+            continue
+        try:
+            score = float(entry["score"])
+        except (TypeError, ValueError):
+            continue
+        rationale = str(entry.get("rationale", ""))[:1000]
+        parsed[dim.name] = (score, rationale)
+    return parsed
 
 
 # ---------------------------------------------------------------------------

@@ -74,13 +74,24 @@ def _depth() -> DepthReport:
     )
 
 
+def _batched_json(score: float, rationale: str, *dim_names: str) -> str:
+    """Build a batched rubric JSON response covering every named dimension."""
+    import json as _json
+
+    return _json.dumps(
+        {name: {"score": score, "rationale": rationale} for name in dim_names}
+    )
+
+
 @dataclass
 class ScriptedLLM:
     name: str = "scripted"
     script: dict[str, str] = field(default_factory=dict)
-    default: str = '{"score": 3.0, "rationale": "default"}'
+    default: str = ""
+    call_count: int = 0
 
     def complete(self, request: LLMRequest) -> LLMResponse:
+        self.call_count += 1
         text = self.default
         for cue, resp in self.script.items():
             if cue in request.prompt:
@@ -199,15 +210,29 @@ def test_heuristic_neutral_on_unknown_dimension():
 
 def test_llm_path_parses_score_and_rationale():
     rubric = _minimal_rubric_config()
-    provider = ScriptedLLM(default='{"score": 3.5, "rationale": "LLM says so."}')
+    provider = ScriptedLLM(
+        default=_batched_json(3.5, "LLM says so.", "soundness", "presentation", "contribution")
+    )
     result = score_rubric(_paper(), _ledger(), _depth(), rubric, provider=provider)
     assert all(d.score == 3.5 for d in result.dimensions)
     assert all(d.rationale == "LLM says so." for d in result.dimensions)
 
 
+def test_llm_path_makes_exactly_one_call_per_rubric_stage():
+    """Regression guard: rubric must batch every dimension into one LLM call."""
+    rubric = _minimal_rubric_config()
+    provider = ScriptedLLM(
+        default=_batched_json(2.0, "fine", "soundness", "presentation", "contribution")
+    )
+    score_rubric(_paper(), _ledger(), _depth(), rubric, provider=provider)
+    assert provider.call_count == 1
+
+
 def test_llm_score_clamped_to_max():
     rubric = _minimal_rubric_config()
-    provider = ScriptedLLM(default='{"score": 99, "rationale": "overshoot"}')
+    provider = ScriptedLLM(
+        default=_batched_json(99, "overshoot", "soundness", "presentation", "contribution")
+    )
     result = score_rubric(_paper(), _ledger(), _depth(), rubric, provider=provider)
     # max_score on each dimension is 4.
     for d in result.dimensions:
@@ -219,6 +244,25 @@ def test_llm_malformed_falls_back_to_heuristic():
     provider = ScriptedLLM(default="not json")
     result = score_rubric(_paper(), _ledger(), _depth(), rubric, provider=provider)
     assert all("LLM output unparseable" in (d.rationale or "") for d in result.dimensions)
+
+
+def test_llm_partial_parse_falls_back_per_dimension():
+    """A batched response that covers only some dimensions should use the
+    LLM scores where available and fall back to heuristics for the rest."""
+    import json as _json
+
+    rubric = _minimal_rubric_config()
+    partial = _json.dumps(
+        {"soundness": {"score": 3.9, "rationale": "solid reasoning."}}
+    )
+    provider = ScriptedLLM(default=partial)
+    result = score_rubric(_paper(), _ledger(), _depth(), rubric, provider=provider)
+    by_name = {d.name: d for d in result.dimensions}
+    assert by_name["soundness"].score == 3.9
+    assert by_name["soundness"].rationale == "solid reasoning."
+    # Missing dimensions get the heuristic+fallback note.
+    for name in ("presentation", "contribution"):
+        assert "LLM output unparseable" in (by_name[name].rationale or "")
 
 
 # ---------------------------------------------------------------------------

@@ -163,8 +163,7 @@ def build_server() -> FastMCP:
                     )
                 except LLMError as exc:
                     warnings.append(
-                        f"Anthropic API request failed: {exc}. "
-                        "Continuing in heuristic mode."
+                        f"Anthropic API request failed: {exc}. Continuing in heuristic mode."
                     )
             else:
                 warnings.append(

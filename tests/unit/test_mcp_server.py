@@ -43,5 +43,3 @@ def test_anthropic_provider_built_when_env_key_present(monkeypatch: pytest.Monke
     assert isinstance(provider, CachingProvider)
     # The underlying adapter is the Anthropic one, wrapped by caching.
     assert provider.inner.__class__.__name__ == "AnthropicProvider"
-
-

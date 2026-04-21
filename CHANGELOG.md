@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Skill now prescribes a standardized, justified output template.** `plugin/skills/evalit/SKILL.md` mandates a reviewer-assist banner, a per-stage bar breakdown with rationales pulled verbatim from `record.json` (`rubric.dimensions[].rationale`, `depth.rationales`, `compliance.issues[]`, `VerificationResult.notes`), a rubric-dimension table, an unverified/hallucinated-claims list (rendered even when empty), a hedged recommendation line, artifact paths, and a verify-every-claim footer. Previous playbook only required compliance triage + composite + recommendation + hallucination count, which let composites appear unexplained. New rules forbid presenting a composite without its breakdown and forbid paraphrasing rationales.
+
 ## [0.0.4] - 2026-04-20
 
 ### Fixed

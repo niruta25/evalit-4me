@@ -13,7 +13,7 @@ Scoring paths:
   descriptions. The model returns one JSON object mapping each dimension
   name to `{"score": float, "rationale": str}`. Batching the call cuts
   the per-paper LLM budget from N calls to 1 — on a typical 4-dimension
-  venue config that's a 4× reduction with no measurable quality loss
+  venue config that's a 4x reduction with no measurable quality loss
   (all dimensions share the same paper context anyway).
 * **Heuristic fallback** — triggered when `provider is None`, when the
   LLM returns unparseable JSON, or on a per-dimension basis when the
@@ -314,9 +314,7 @@ def _build_excerpts(paper: Paper) -> str:
     return "\n\n".join(parts) if parts else "(no key sections found)"
 
 
-def _parse_batched_json(
-    raw: str, dims: list[RubricDimension]
-) -> dict[str, tuple[float, str]]:
+def _parse_batched_json(raw: str, dims: list[RubricDimension]) -> dict[str, tuple[float, str]]:
     """Parse the batched rubric response.
 
     Shape expected: `{dim_name: {"score": float, "rationale": str}, ...}`.

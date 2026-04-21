@@ -78,9 +78,7 @@ def _batched_json(score: float, rationale: str, *dim_names: str) -> str:
     """Build a batched rubric JSON response covering every named dimension."""
     import json as _json
 
-    return _json.dumps(
-        {name: {"score": score, "rationale": rationale} for name in dim_names}
-    )
+    return _json.dumps({name: {"score": score, "rationale": rationale} for name in dim_names})
 
 
 @dataclass
@@ -252,9 +250,7 @@ def test_llm_partial_parse_falls_back_per_dimension():
     import json as _json
 
     rubric = _minimal_rubric_config()
-    partial = _json.dumps(
-        {"soundness": {"score": 3.9, "rationale": "solid reasoning."}}
-    )
+    partial = _json.dumps({"soundness": {"score": 3.9, "rationale": "solid reasoning."}})
     provider = ScriptedLLM(default=partial)
     result = score_rubric(_paper(), _ledger(), _depth(), rubric, provider=provider)
     by_name = {d.name: d for d in result.dimensions}

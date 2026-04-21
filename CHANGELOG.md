@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Skill now prescribes a standardized, justified output template.** `plugin/skills/evalit/SKILL.md` mandates a reviewer-assist banner, a per-stage bar breakdown with rationales pulled verbatim from `record.json` (`rubric.dimensions[].rationale`, `depth.rationales`, `compliance.issues[]`, `VerificationResult.notes`), a rubric-dimension table, an unverified/hallucinated-claims list (rendered even when empty), a hedged recommendation line, artifact paths, and a verify-every-claim footer. Previous playbook only required compliance triage + composite + recommendation + hallucination count, which let composites appear unexplained. New rules forbid presenting a composite without its breakdown and forbid paraphrasing rationales.
+- **LLM is the default; heuristic fallback is loud, not silent.** `review_paper` MCP tool now cascades through three providers: MCP sampling → `ANTHROPIC_API_KEY` → heuristic. Every downgrade appends a caller-visible warning to the response payload, and the mode actually used is exposed as `llm_mode` (`mcp_sampling` / `anthropic_api` / `heuristic`). Previously the server silently fell back to heuristic whenever MCP sampling raised `SamplingUnsupportedError`, which produced zero-claim records indistinguishable from a real-LLM run at a glance.
+- `review_paper` response payload now includes `llm_mode: str` and `warnings: list[str]` at the top level. Empty `warnings` means the full LLM pipeline ran cleanly. Non-empty means the caller (skill/Claude) should surface them verbatim to the user.
+
+### Added
+- `src/evalit_4me/mcp_server/server.py`: `_build_anthropic_provider_from_env()` helper — wraps `AnthropicProvider` in the standard caching + cost-tracking layers when `ANTHROPIC_API_KEY` is present in the server's environment.
+- `tests/unit/test_mcp_server.py` — pins `LLM_MODE_*` constants and the env-key-based provider-build behavior.
 
 ## [0.0.4] - 2026-04-20
 

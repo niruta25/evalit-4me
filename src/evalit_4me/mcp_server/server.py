@@ -23,13 +23,16 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
 
+from evalit_4me.llm.anthropic_adapter import AnthropicProvider
 from evalit_4me.llm.cache import CachingProvider, DiskCache
 from evalit_4me.llm.cost import CostTracker
+from evalit_4me.llm.errors import LLMAuthError, LLMError
 from evalit_4me.llm.mcp_sampling_adapter import (
     McpSamplingProvider,
     SamplingUnsupportedError,
@@ -46,6 +49,11 @@ from evalit_4me.skill_helpers import (
 from evalit_4me.stages.verify import HTTPClient
 
 log = logging.getLogger("evalit.mcp")
+
+# Response field constants so the skill + downstream callers have stable keys.
+LLM_MODE_SAMPLING = "mcp_sampling"
+LLM_MODE_ANTHROPIC = "anthropic_api"
+LLM_MODE_HEURISTIC = "heuristic"
 
 
 def build_server() -> FastMCP:
@@ -100,38 +108,92 @@ def build_server() -> FastMCP:
             raise ValueError(f"unknown config(s): {bad}; must be one of {SHIPPED_CONFIGS}")
 
         loop = asyncio.get_running_loop()
-        provider = _build_sampling_provider(ctx, loop=loop)
         http_client = HTTPClient()
 
         # Pipeline is sync — we run it in a worker thread below so the MCP
         # event loop stays free for sampling round-trips.
 
-        def _run() -> tuple[Path, list[Any]]:
-            try:
-                return run_multi_config(
-                    path,
-                    configs,
-                    provider=provider,
-                    http_client=http_client,
-                    parallel=True,
-                )
-            except SamplingUnsupportedError:
-                log.info(
-                    "MCP client does not support sampling; re-running pipeline "
-                    "in heuristic mode (no LLM)."
-                )
-                return run_multi_config(
-                    path,
-                    configs,
-                    provider=None,
-                    http_client=http_client,
-                    parallel=True,
+        def _run() -> tuple[Path, list[Any], str, list[str]]:
+            """Cascade: MCP sampling → ANTHROPIC_API_KEY → heuristic.
+
+            Real LLM is the default; heuristic is the last-resort fallback,
+            and every downgrade appends a warning the caller must surface.
+            Returns (out_dir, results, llm_mode, warnings).
+            """
+            warnings: list[str] = []
+
+            sampling_provider = _build_sampling_provider(ctx, loop=loop)
+            if sampling_provider is not None:
+                try:
+                    out_dir, results = run_multi_config(
+                        path,
+                        configs,
+                        provider=sampling_provider,
+                        http_client=http_client,
+                        parallel=True,
+                    )
+                    return out_dir, results, LLM_MODE_SAMPLING, warnings
+                except SamplingUnsupportedError:
+                    log.info(
+                        "MCP client does not advertise sampling/createMessage; "
+                        "trying ANTHROPIC_API_KEY fallback."
+                    )
+                    warnings.append(
+                        "MCP sampling unavailable — this MCP host (commonly "
+                        "Claude Code today) does not implement "
+                        "sampling/createMessage. See "
+                        "https://github.com/anthropics/claude-code/issues/1785"
+                    )
+
+            api_provider = _build_anthropic_provider_from_env()
+            if api_provider is not None:
+                try:
+                    out_dir, results = run_multi_config(
+                        path,
+                        configs,
+                        provider=api_provider,
+                        http_client=http_client,
+                        parallel=True,
+                    )
+                    return out_dir, results, LLM_MODE_ANTHROPIC, warnings
+                except LLMAuthError as exc:
+                    warnings.append(
+                        f"ANTHROPIC_API_KEY authentication failed: {exc}. "
+                        "Check the key's validity or clear the env var."
+                    )
+                except LLMError as exc:
+                    warnings.append(
+                        f"Anthropic API request failed: {exc}. Continuing in heuristic mode."
+                    )
+            else:
+                warnings.append(
+                    "ANTHROPIC_API_KEY not set — cannot use direct-API fallback. "
+                    "Export ANTHROPIC_API_KEY to get real-LLM output until the "
+                    "MCP host supports sampling."
                 )
 
-        out_dir, results = await asyncio.to_thread(_run)
+            warnings.append(
+                "LLM UNAVAILABLE — pipeline ran in HEURISTIC mode. Claim "
+                "decomposition was skipped (total_claims=0), citation "
+                "entailment did not run, and rubric scores are heuristic. "
+                "The composite is still computed, but the quality is lower "
+                "than a full-LLM run."
+            )
+            out_dir, results = run_multi_config(
+                path,
+                configs,
+                provider=None,
+                http_client=http_client,
+                parallel=True,
+            )
+            return out_dir, results, LLM_MODE_HEURISTIC, warnings
+
+        out_dir, results, llm_mode, warnings = await asyncio.to_thread(_run)
 
         payload: dict[str, Any] = {
             "out_dir": str(out_dir),
+            "llm_mode": llm_mode,
+            "warnings": warnings,
             "runs": [
                 {
                     "config": r.config_name,
@@ -207,14 +269,36 @@ def _build_sampling_provider(
     """Wrap MCP sampling in the caching + cost-tracking provider layers.
 
     Returns None when no `Context` is available (e.g. a unit test invoking
-    the tool directly). The pipeline then runs in heuristic mode.
+    the tool directly). The caller cascades to the Anthropic / heuristic
+    fallbacks when that happens.
     """
     if ctx is None:
         return None
     try:
         inner = McpSamplingProvider(ctx=ctx, loop=loop)
     except Exception:
-        log.exception("Failed to construct McpSamplingProvider; falling back to heuristic mode.")
+        log.exception("Failed to construct McpSamplingProvider; trying API fallback.")
+        return None
+    return CachingProvider(
+        inner=inner,
+        cache=DiskCache(),
+        tracker=CostTracker(),
+    )
+
+
+def _build_anthropic_provider_from_env() -> CachingProvider | None:
+    """Construct an `AnthropicProvider` from `ANTHROPIC_API_KEY` in the env.
+
+    Returns None when the env var is absent or the SDK client fails to
+    construct. Caller treats None as "API fallback unavailable" and adds
+    a warning before continuing to the heuristic path.
+    """
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        inner = AnthropicProvider()
+    except Exception:
+        log.exception("Failed to construct AnthropicProvider; continuing to heuristic.")
         return None
     return CachingProvider(
         inner=inner,

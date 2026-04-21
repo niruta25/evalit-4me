@@ -131,8 +131,10 @@ def init_template(target: Path | str, *, overwrite: bool = False) -> Path:
     # Wheel install: evalit_4me/_configs/template.yaml (parents[1] from this file).
     # Editable install: repo-root configs/template.yaml (parents[3]).
     pkg_local = Path(__file__).resolve().parents[1] / "_configs" / "template.yaml"
-    template = pkg_local if pkg_local.exists() else (
-        Path(__file__).resolve().parents[3] / "configs" / "template.yaml"
+    template = (
+        pkg_local
+        if pkg_local.exists()
+        else (Path(__file__).resolve().parents[3] / "configs" / "template.yaml")
     )
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")

@@ -8,8 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Rubric stage batches all dimensions into one LLM call.** Previously `score_rubric` issued one LLM request per `RubricDimension` (4 calls for shipped neurips/arxiv/ieee configs). It now issues a single request whose prompt lists every dimension and whose response is one JSON object mapping `dim_name → {score, rationale}`. Verified live end-to-end: on the arxiv sample total sampling calls dropped from 12 to 9 (8 decomposition + 1 rubric, was 8 + 4). Per-dimension heuristic fallback still kicks in when a specific dimension is missing from the batched response or when the whole response fails to parse.
-- `tests/unit/stages/test_rubric.py`: `ScriptedLLM` now counts calls; added `test_llm_path_makes_exactly_one_call_per_rubric_stage` as a regression guard plus `test_llm_partial_parse_falls_back_per_dimension` for the mixed-success path.
+- **Skill now prescribes a standardized, justified output template.** `plugin/skills/evalit/SKILL.md` mandates a reviewer-assist banner, a per-stage bar breakdown with rationales pulled verbatim from `record.json` (`rubric.dimensions[].rationale`, `depth.rationales`, `compliance.issues[]`, `VerificationResult.notes`), a rubric-dimension table, an unverified/hallucinated-claims list (rendered even when empty), a hedged recommendation line, artifact paths, and a verify-every-claim footer. Previous playbook only required compliance triage + composite + recommendation + hallucination count, which let composites appear unexplained. New rules forbid presenting a composite without its breakdown and forbid paraphrasing rationales.
 
 ## [0.0.4] - 2026-04-20
 

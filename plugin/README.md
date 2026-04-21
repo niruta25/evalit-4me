@@ -16,7 +16,7 @@ Reviewer-assist academic-paper review for Claude Code. Exposes the [evalit-4me](
 
 ## Prerequisites
 
-- [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf-lite,docx] @ git+...@v0.0.3"`, which fetches and caches the Python package automatically — no separate clone or `pip install` required. Cold-start is ~5–10s; subsequent invocations are instant.
+- [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf-lite,docx] @ git+...@v0.0.4"`, which fetches and caches the Python package automatically — no separate clone or `pip install` required. Cold-start is ~5–10s; subsequent invocations are instant.
 - **No API key required.** LLM work (rubric scoring, citation entailment) runs through Claude Code via MCP sampling using whatever model auth Claude Code already has. If the host client doesn't support sampling, the pipeline falls back to its deterministic heuristic mode — you still get a full result.
 - **Inputs accepted:** `.pdf`, `.md`, `.docx`. PDFs are parsed with `pdfplumber` (~10 MB, subsecond on most papers). For figure-heavy or math-dense PDFs where pdfplumber struggles, pre-convert with marker externally and feed the `.md`, or set `EVALIT_USE_MARKER=1` to opt in to marker inside the pipeline (requires the `[pdf]` extra and ~2 GB of model weights).
 
@@ -29,7 +29,7 @@ The repo root ships a `.claude-plugin/marketplace.json` that declares this plugi
 /plugin install evalit@niruta25-plugins
 ```
 
-The install pins to release tag `v0.0.3`; upgrades happen when you re-run `/plugin install` after a new tag is cut.
+The install pins to release tag `v0.0.4`; upgrades happen when you re-run `/plugin install` after a new tag is cut.
 
 ## Try it
 

@@ -494,7 +494,7 @@ The plugin lives at [`plugin/`](./plugin/) in this repo — a proper Claude Code
 /plugin install evalit@niruta25-plugins
 ```
 
-Prereq: [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf-lite,docx] @ git+...@v0.0.3"`, pinned to a release tag — no separate clone or `uv sync` required. Cold-start is ~5–10 s; subsequent invocations are instant. `detect_config` is subsecond even on a cold install. LLM work routes through Claude Code via MCP sampling — no `ANTHROPIC_API_KEY` required on the plugin path.
+Prereq: [`uv`](https://docs.astral.sh/uv/) on your `PATH`. The MCP server is spawned via `uv run --with "evalit-4me[mcp,pdf-lite,docx] @ git+...@v0.0.4"`, pinned to a release tag — no separate clone or `uv sync` required. Cold-start is ~5–10 s; subsequent invocations are instant. `detect_config` is subsecond even on a cold install. LLM work routes through Claude Code via MCP sampling — no `ANTHROPIC_API_KEY` required on the plugin path.
 
 Plugin-specific docs: [`plugin/README.md`](./plugin/README.md).
 
@@ -508,7 +508,7 @@ Add this block to `~/Library/Application Support/Claude/claude_desktop_config.js
     "evalit": {
       "command": "uv",
       "args": ["run", "--with",
-               "evalit-4me[mcp,pdf-lite,docx] @ git+https://github.com/niruta25/evalit-4me@v0.0.3",
+               "evalit-4me[mcp,pdf-lite,docx] @ git+https://github.com/niruta25/evalit-4me@v0.0.4",
                "python", "-m", "evalit_4me.mcp_server.server"]
     }
   }
